@@ -12,11 +12,11 @@
     # Redirect requests for images:
 	RewriteCond %{REQUEST_FILENAME} -f
 	RewriteCond %{QUERY_STRING} s=
-	RewriteRule ^(.+)\.(png|jpg|gif)$ /asset_services/images/images.php [NC,L]
+	RewriteRule ^(.+)\.(png|jpg|gif)$ /plugins/system/assets/services/images/images.php [NC,L]
     
     
     # Do the equivalent for downloads:
     #RewriteCond %{REQUEST_FILENAME} -f
 	#RewriteCond %{QUERY_STRING} s=
-	#RewriteRule ^(.+)\.(doc|docx|pdf|ppt|pptx)$ /asset_services/downloads/downloads.php [NC,L]
+	#RewriteRule ^(.+)\.(doc|docx|pdf|ppt|pptx)$ /plugins/system/assets/services/downloads/downloads.php [NC,L]
 </IfModule>

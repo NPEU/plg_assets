@@ -3,9 +3,6 @@ class plgSystemAssetsInstallerScript
 {
     protected $plugin_dir = JPATH_ROOT . '/plugins/system/assets';
 
-    // On uninstall this folder should be deleted:
-    protected $asset_services_dir = '/asset_services';
-
     // On uninstall this folder SHOULD NOT be deleted, or all assets will be lost.
     // (However, we should delete the htaccess file this plugin added).
     protected $assets_dir = '/assets';
@@ -33,16 +30,6 @@ class plgSystemAssetsInstallerScript
             JPATH_ROOT . $this->assets_dir . '/.htaccess'
         );
 
-        // Copy latest services files:
-        if (JFolder::exists(JPATH_ROOT . $this->asset_services_dir)) {
-            JFolder::delete(JPATH_ROOT . $this->asset_services_dir);
-        }
-
-        JFolder::move(
-            $this->plugin_dir . $this->asset_services_dir,
-            JPATH_ROOT . $this->asset_services_dir
-        );
-
         return true;
 	}
 
@@ -54,7 +41,6 @@ class plgSystemAssetsInstallerScript
 	public function uninstall(JAdapterInstance $adapter)
 	{
         JFile::delete(JPATH_ROOT . $this->assets_dir . '/.htaccess');
-        JFolder::delete(JPATH_ROOT . $this->asset_services_dir);
 	}
 }
 ?>
