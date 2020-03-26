@@ -13,6 +13,8 @@
     <version>1.0.0</version>
     <!-- The description is optional and defaults to the name -->
     <description>PLG_SYSTEM_ASSETS_XML_DESCRIPTION</description>
+    
+    <scriptfile>assets.script.php</scriptfile>
 
     <updateservers>
         <!-- Note: No spaces or linebreaks allowed between the server tags -->
@@ -21,8 +23,10 @@
     
     <files>
         <filename plugin="assets">assets.php</filename>
+        <filename>assets.htaccess.txt</filename>
         <filename>index.html</filename>
         <folder>language</folder>
+        <folder>asset_services</folder>
     </files>
 
 </extension>
