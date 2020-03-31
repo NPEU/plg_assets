@@ -25,6 +25,7 @@
         <filename plugin="assets">assets.php</filename>
         <filename>assets.htaccess.txt</filename>
         <filename>index.html</filename>
+        <folder>forms</folder>
         <folder>language</folder>
         <folder>services</folder>
     </files>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<form>
+  <fields name="attribs">
+     <fieldset name="assets" label="PLG_SYSTEM_ASSETS_FIELDSET_LABEL">
+        <field
+            name="assets-downloads-list"
+            type="textarea"
+            label="PLG_SYSTEM_ASSETS_DOWNLOADS_LABEL"
+            description="PLG_SYSTEM_ASSETS_DOWNLOADS_DESC"
+        />
+     </fieldset>
+  </fields>
+</form>

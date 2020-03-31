@@ -13,10 +13,10 @@
 	RewriteCond %{REQUEST_FILENAME} -f
 	RewriteCond %{QUERY_STRING} s=
 	RewriteRule ^(.+)\.(png|jpg|gif)$ /plugins/system/assets/services/images/images.php [NC,L]
-    
-    
-    # Do the equivalent for downloads:
-    #RewriteCond %{REQUEST_FILENAME} -f
-	#RewriteCond %{QUERY_STRING} s=
-	#RewriteRule ^(.+)\.(doc|docx|pdf|ppt|pptx)$ /plugins/system/assets/services/downloads/downloads.php [NC,L]
+
+    # For downloads all we need to do is check for the presence of the unlock file.
+    RewriteCond expr "%{REQUEST_URI} -strmatch '/assets/downloads/*'"
+    RewriteCond "%{REQUEST_FILENAME}.unlock" !-f
+    RewriteRule (.*) - [R=404,L]
+
 </IfModule>
