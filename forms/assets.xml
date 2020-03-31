@@ -7,6 +7,7 @@
             type="textarea"
             label="PLG_SYSTEM_ASSETS_DOWNLOADS_LABEL"
             description="PLG_SYSTEM_ASSETS_DOWNLOADS_DESC"
+            readonly="true"
         />
      </fieldset>
   </fields>
