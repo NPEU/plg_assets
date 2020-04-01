@@ -17,4 +17,21 @@
             <tag>stable</tag>
         </tags>
     </update>
+    <update>
+        <name>NPEU: plg_assets</name>
+        <description>Joomla! plg_assets plugin</description>
+        <element>assets</element>
+        <type>plugin</type>
+        <folder>system</folder>
+        <version>1.0.0</version>
+        <client>site</client>
+        <infourl title="NPEU: plg_assets">https://github.com/NPEU/plg_assets/releases/tag/1.0.0</infourl>
+        <downloads>
+            <downloadurl type="full" format="zip">https://github.com/NPEU/plg_assets/archive/v1.0.0.zip</downloadurl>
+        </downloads>
+        <targetplatform name="joomla" />
+        <tags>
+            <tag>stable</tag>
+        </tags>
+    </update>
 </updates>
