@@ -38,6 +38,45 @@ class plgSystemAssets extends JPlugin
     }
 
     /**
+     *
+     * @param   string  $context  The context of the content passed to the plugin (added in 1.6)
+     * @param   object  $article  A JTableContent object
+     * @param   bool    $isNew    If the content has just been created
+     *
+     * @return  void
+     */
+    public function onContentAfterSave($context, $article, $isNew)
+    {
+        // Check if we're saving an media file:
+        if ($context != 'com_media.file') {
+            return true;
+        }
+
+        // We only want to generate thumbnails for PDF's:
+        if ($article->type != 'application/pdf') {
+            return true;
+        }
+
+        // Generate the thumbnail:
+        $thumbsize        = $this->params->get('thumbsize', '1200');
+        $imagemagick_path = 'convert';
+        $pdf              = $article->filepath;
+        $img              = str_replace('.pdf', '.png', $pdf);
+
+        // ---Imagemagick/Ghostscript now fails with the -colorspace flag in place.
+        // I haven't been able to figure out why, so just removing it for now as it still
+        // seems to work without it, though the colours aren't great.---
+        // UPDATE 20190603 - seems to have been resolved. At least it's working now so
+        // reinstating -colorspace to fix colours.
+        // Note "background white -alpha remove -flatten -alpha off" adds a white background.
+        $options  = ' -strip -colorspace rgb -density 300x300 -resize ' . $thumbsize . 'x'. $thumbsize . ' -quality 90 ';
+        $cmd      = $imagemagick_path . $options . '"' . $pdf . '[0]" background white -alpha remove -flatten -alpha off ' . '"' . $img . '"';
+        $output = exec($cmd . ' 2>&1');
+
+        return true;
+    }
+
+    /**
      * Prepare form.
      *
      * @param   JForm  $form  The form to be altered.
@@ -76,7 +115,7 @@ class plgSystemAssets extends JPlugin
     {
         // Check if we're saving an article:
         if ($context != 'com_content.article') {
-            return false;
+            return true;
         }
 
         // Delete the unlock files of all files that were assigned to this article when it was

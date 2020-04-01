@@ -16,6 +16,7 @@
 
     # For downloads all we need to do is check for the presence of the unlock file.
     RewriteCond expr "%{REQUEST_URI} -strmatch '/assets/downloads/*'"
+    RewriteCond %{REQUEST_URI} !\.(png|jpg|gif)$
     RewriteCond "%{REQUEST_FILENAME}.unlock" !-f
     RewriteRule (.*) - [R=404,L]
 

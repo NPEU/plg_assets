@@ -30,4 +30,18 @@
         <folder>services</folder>
     </files>
 
+    <config>
+         <fields name="params">
+            <fieldset name="basic">
+               <field
+                  name="thumbsize"
+                  type="number"
+                  label="PLG_SYSTEM_ASSETS_CONFIG_THUMBSIZE_LABEL"
+                  description="PLG_SYSTEM_ASSETS_CONFIG_THUMBSIZE_DESC"
+                  default="1200"
+               />
+            </fieldset>
+         </fields>
+      </config>
+
 </extension>
