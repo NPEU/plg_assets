@@ -23,20 +23,6 @@ class plgSystemAssets extends JPlugin
 {
     protected $autoloadLanguage = true;
 
-    /*
-     * @return  boolean  True on success
-     */
-    public function onAfterRoute()
-    {
-        $app = JFactory::getApplication();
-        if ($app->isAdmin()) {
-            return; // Don't run in admin
-        }
-
-        $app->enqueueMessage('Testing (' . date('c') . ')', 'notice');
-        return;
-    }
-
     /**
      *
      * @param   string  $context  The context of the content passed to the plugin (added in 1.6)
@@ -52,16 +38,28 @@ class plgSystemAssets extends JPlugin
             return true;
         }
 
-        // We only want to generate thumbnails for PDF's:
-        if ($article->type != 'application/pdf') {
-            return true;
+        $type        = $article->type;
+        $file        = $article->filepath;
+        $info        = pathinfo($file);
+
+        // We just add .png to the thumbnail filename so we can determine the real filename in the
+        // 'Downloads Media Hack' (see elsewhere):
+        $img         = $file . '.png';
+        $delete_file = false;
+
+        // If it's not a PDF, we need to convert it one to be able to created the thumbnail, then
+        // delete it:
+        if ($type != 'application/pdf') {
+            // Note unoconv default export format is PDF so we don't need to specify:
+            $cmd         = 'unoconv -e PageRange=1 "' . $file . '"';
+            $output      = exec($cmd . ' 2>&1');
+            $file        = preg_replace('#\.' . $info['extension'] . '$#', '.pdf', $file);
+            $delete_file = true;
         }
 
         // Generate the thumbnail:
         $thumbsize        = $this->params->get('thumbsize', '1200');
         $imagemagick_path = 'convert';
-        $pdf              = $article->filepath;
-        $img              = str_replace('.pdf', '.png', $pdf);
 
         // ---Imagemagick/Ghostscript now fails with the -colorspace flag in place.
         // I haven't been able to figure out why, so just removing it for now as it still
@@ -70,8 +68,13 @@ class plgSystemAssets extends JPlugin
         // reinstating -colorspace to fix colours.
         // Note "background white -alpha remove -flatten -alpha off" adds a white background.
         $options  = ' -strip -colorspace rgb -density 300x300 -resize ' . $thumbsize . 'x'. $thumbsize . ' -quality 90 ';
-        $cmd      = $imagemagick_path . $options . '"' . $pdf . '[0]" background white -alpha remove -flatten -alpha off ' . '"' . $img . '"';
+        $cmd      = $imagemagick_path . $options . '"' . $file . '[0]" background white -alpha remove -flatten -alpha off ' . '"' . $img . '"';
+
         $output = exec($cmd . ' 2>&1');
+
+        if ($delete_file) {
+            unlink($file);
+        }
 
         return true;
     }
@@ -155,5 +158,58 @@ class plgSystemAssets extends JPlugin
         $item->attribs = $new_attribs;
 
         return true;
+    }
+
+    /**
+	 * onAfterRender
+     * Joomla's Media component does not handle using it for downloads. Rather than replace the
+     * component or hack it, about we've ensured there's always a thumbnail of each download, so the
+     * the media component is effectively tricked into displaying all the available downloads, since
+     * the always exists a matching image (the Media Component will only show images when opened as
+     * a model for the Image file input, and there isn't a Downloads equivalent).
+     * However, we need to make the sure actual file path is passed back to the editor, so we need
+     * to replace all occurrences of the image filename with the download filename, except where it
+     * appears as the thumbnail src.
+     * This is why thumbnails have .png appended to the full filename, rather than replacing the
+     * extension.
+ 	 */
+	public function onAfterRender()
+	{
+        $app = JFactory::getApplication();
+        if ($app->isClient('site')) {
+            return;
+        }
+
+        $uri = Joomla\CMS\Uri\Uri::getInstance();
+
+        if ($uri->getVar('option') != 'com_media') {
+            return;
+        }
+
+		$response = JResponse::getBody();
+
+        if ($uri->getVar('view') == 'imagesList') {
+            preg_match_all('#<img[^>]+src="[^"]*/assets/downloads/([^"]+)"#', $response, $matches, PREG_SET_ORDER);
+
+            foreach ($matches as $match) {
+                $info     = pathinfo($match[1]);
+
+                // Replace the whole image tag temporarily:
+                $response = str_replace($match[0], '<<<TMP-IMAGE>>>', $response);
+
+                // Replace all other occurrences of the filename:
+                $response = str_replace($info['basename'], $info['filename'], $response);
+
+                // Restore the image tag:
+                $response = str_replace('<<<TMP-IMAGE>>>', $match[0], $response);
+            }
+        }
+
+        if ($uri->getVar('view') == 'images' && $uri->getVar('fieldid') == 'jfile_href') {
+            // Update labels image -> file:
+            $response = str_replace('<label for="f_url">Image URL</label>', '<label for="f_url">File URL</label>', $response);
+        }
+
+		JResponse::setBody($response);
     }
 }
