@@ -66,9 +66,9 @@ class plgSystemAssets extends JPlugin
         // seems to work without it, though the colours aren't great.---
         // UPDATE 20190603 - seems to have been resolved. At least it's working now so
         // reinstating -colorspace to fix colours.
-        // Note "background white -alpha remove -flatten -alpha off" adds a white background.
+        // Note "-background white -alpha remove -flatten -alpha off" adds a white background.
         $options  = ' -strip -colorspace rgb -density 300x300 -resize ' . $thumbsize . 'x'. $thumbsize . ' -quality 90 ';
-        $cmd      = $imagemagick_path . $options . '"' . $file . '[0]" background white -alpha remove -flatten -alpha off ' . '"' . $img . '"';
+        $cmd      = $imagemagick_path . $options . '"' . $file . '[0]" -background white -alpha remove -flatten -alpha off ' . '"' . $img . '"';
 
         $output = exec($cmd . ' 2>&1');
 
