@@ -1,13 +1,17 @@
 # ----------------------------------------------------------------------
 # Single Entry Point
 #
-# IMPORTANT: This file is part of plg_assets and will be overwritten 
+# IMPORTANT: This file is part of plg_assets and will be overwritten
 # whenever that extension is updated, so DO NOT MAKE CHANGES HERE.
 # ----------------------------------------------------------------------
 <IfModule mod_rewrite.c>
 	Options +FollowSymlinks
 	RewriteEngine On
 	RewriteBase /
+
+    # File info requests are appended with .json
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^(.+)\.(json)$ /plugins/system/assets/services/fileinfo/fileinfo.php?format=$2 [NC,L]
 
     # Redirect requests for images:
 	RewriteCond %{REQUEST_FILENAME} -f
