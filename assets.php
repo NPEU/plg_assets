@@ -163,10 +163,10 @@ class plgSystemAssets extends JPlugin
     /**
 	 * onAfterRender
      * Joomla's Media component does not handle using it for downloads. Rather than replace the
-     * component or hack it, about we've ensured there's always a thumbnail of each download, so the
+     * component or hack it about, we've ensured there's always a thumbnail of each download, so the
      * the media component is effectively tricked into displaying all the available downloads, since
-     * the always exists a matching image (the Media Component will only show images when opened as
-     * a model for the Image file input, and there isn't a Downloads equivalent).
+     * there always exists a matching image (the Media Component will only show images when opened 
+     * as a model for the Image file input, and there isn't a Downloads equivalent).
      * However, we need to make the sure actual file path is passed back to the editor, so we need
      * to replace all occurrences of the image filename with the download filename, except where it
      * appears as the thumbnail src.
