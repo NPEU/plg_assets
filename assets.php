@@ -85,13 +85,12 @@ class plgSystemAssets extends JPlugin
         }
 
         $file = $article->filepath;
-        #$type = $article->type;
+        $type = $article->type;
         #$info = pathinfo($file);
 
         $upload_file_permissions = octdec($this->params->get('upload_file_permissions', false));
         $upload_file_group       = $this->params->get('upload_file_group', false);
 
-        #echo $upload_file_permissions . ' : ' . $upload_file_group; exit;
 
         // Set the file to our preferred permissions:
         if ($upload_file_permissions) {
@@ -102,7 +101,12 @@ class plgSystemAssets extends JPlugin
         if ($upload_file_group) {
             chgrp($file, $upload_file_group);
         }
-
+        
+        // If this is an image file, we're done:
+        #if (!in_array($type, array('bmp', 'gif', 'jpeg', 'jpg', 'png'))) {
+        if (strpos($type, 'image') !== false) {
+            return true;
+        }
 
         $img_file = $this->generateThumbnail($file);
 
