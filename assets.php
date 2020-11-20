@@ -101,7 +101,7 @@ class plgSystemAssets extends JPlugin
         if ($upload_file_group) {
             chgrp($file, $upload_file_group);
         }
-        
+
         // If this is an image file, we're done:
         #if (!in_array($type, array('bmp', 'gif', 'jpeg', 'jpg', 'png'))) {
         if (strpos($type, 'image') !== false) {
@@ -258,7 +258,11 @@ class plgSystemAssets extends JPlugin
 
             // Delete the unlock files of all files that were assigned to this article when it was
             // last saved:
-            $files = str_replace("\r", '', trim($data['attribs']['assets-downloads-list']));
+            $files = false;
+            if (isset($data['attribs']['assets-downloads-list'])) {
+                $files = str_replace("\r", '', trim($data['attribs']['assets-downloads-list']));
+            }
+
             if (!empty($files)) {
                 $files = explode("\n", $files);
 
