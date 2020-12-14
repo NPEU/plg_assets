@@ -29,14 +29,47 @@ class plgSystemAssets extends JPlugin
      *
      * @return  mixed   The image filename or false on failure
      */
-    protected function generateThumbnail($file) {
-
+    protected function generateThumbnail($tmp_filepath, $filepath, $filetype) {
         $upload_file_permissions = octdec($this->params->get('upload_file_permissions', false));
         $upload_file_group       = $this->params->get('upload_file_group', false);
+        $upload_file_owner       = $this->params->get('upload_file_owner', false);
+
+        $fileinfo = pathinfo($filepath);
+
+        // We need to make sure ImageMagick can convert the file to a PDF via a delegate
+        // (LibreOffice) but now (as of Dec 2020) the /tmp prvate system file seems to prevent this
+        // form generating a PDF first so we need to copy the tmp file to a different temporary
+        // folder. I can't see any reason do add in the logic to ONLY do this if it's not a PDF,
+        // so it makes sense to me to just make that copy anywyay in all cases.
+
+        $tmp_copy_filepath = '/tmp/' . $fileinfo['basename'];
+        copy($tmp_filepath, $tmp_copy_filepath);
+
+        chmod($tmp_copy_filepath, $upload_file_permissions);
+        chgrp($tmp_copy_filepath, $upload_file_group);
+        chown($tmp_copy_filepath, $upload_file_owner);
+
+        $tmp_filepath = $tmp_copy_filepath;
+
+        /*
+        // ImageMagick can generate thumbnails from non-PDF's if a suitabel delegate is install
+        // (e.g. LibreOffice), but KEEP FOR REFERENCE:
+
+        // If it's not a PDF, we need to convert it one to be able to created the thumbnail, then
+        // delete it:
+        if ($type != 'application/pdf') {
+            $info = pathinfo($file);
+            // Note unoconv default export format is PDF so we don't need to specify:
+            $cmd         = 'unoconv -e PageRange=1 "' . $file . '"';
+            $output      = exec($cmd . ' 2>&1');
+            $pdf_file    = preg_replace('#\.' . $info['extension'] . '$#', '.pdf', $file);
+        }
+        */
+
 
         // We just add .png to the thumbnail filename so we can determine the real filename in the
         // 'Downloads Media Hack' (see elsewhere):
-        $img_file = $file . '.png';
+        $img_filepath = $filepath . '.png';
 
         $thumbsize        = $this->params->get('thumbsize', '1200');
         $imagemagick_path = 'HOME=/tmp convert';
@@ -48,22 +81,32 @@ class plgSystemAssets extends JPlugin
         // reinstating -colorspace to fix colours.
         // Note "-background white -alpha remove -flatten -alpha off" adds a white background.
         $options  = ' -strip -colorspace rgb -density 300x300 -resize ' . $thumbsize . 'x'. $thumbsize . ' -quality 90 ';
-        $cmd      = $imagemagick_path . $options . '"' . $file . '[0]" -background white -alpha remove -flatten -alpha off ' . '"' . $img_file . '"';
+        $cmd      = $imagemagick_path . $options . '"' . $tmp_filepath . '[0]" -background white -alpha remove -flatten -alpha off ' . '"' . $img_filepath . '"';
         $output = exec($cmd . ' 2>&1');
 
+        // Delete any temmporary PDF:
+        if (file_exists($tmp_copy_filepath)) {
+            unlink($tmp_copy_filepath);
+        }
+
         // Did the image get generated?
-        if (file_exists($img_file)) {
+        if (file_exists($img_filepath)) {
             // Set the file to our preferred permissions:
             if ($upload_file_permissions) {
-                chmod($img_file, $upload_file_permissions);
+                chmod($img_filepath, $upload_file_permissions);
             }
 
             // Set the file to belong to our preferred group:
             if ($upload_file_group) {
-                chgrp($img_file, $upload_file_group);
+                chgrp($img_filepath, $upload_file_group);
             }
 
-            return $img_file;
+            // Set the file to belong to our preferred owner:
+            if ($upload_file_owner) {
+                chown($img_filepath, $upload_file_owner);
+            }
+
+            return $img_filepath;
         } else {
             return false;
         }
@@ -84,99 +127,43 @@ class plgSystemAssets extends JPlugin
             return true;
         }
 
-        $file = $article->filepath;
-        $type = $article->type;
+        $filepath = $article->filepath;
+        $filetype = $article->type;
         #$info = pathinfo($file);
 
         $upload_file_permissions = octdec($this->params->get('upload_file_permissions', false));
         $upload_file_group       = $this->params->get('upload_file_group', false);
-
+        $upload_file_owner       = $this->params->get('upload_file_owner', false);
 
         // Set the file to our preferred permissions:
         if ($upload_file_permissions) {
-            chmod($file, $upload_file_permissions);
+            chmod($filepath, $upload_file_permissions);
         }
 
         // Set the file to belong to our preferred group:
         if ($upload_file_group) {
-            chgrp($file, $upload_file_group);
+            chgrp($filepath, $upload_file_group);
+        }
+
+        // Set the file to belong to our preferred owner:
+        if ($upload_file_owner) {
+            chown($img_file, $upload_file_owner);
         }
 
         // If this is an image file, we're done:
         #if (!in_array($type, array('bmp', 'gif', 'jpeg', 'jpg', 'png'))) {
-        if (strpos($type, 'image') !== false) {
+        if (strpos($filetype, 'image') !== false) {
             return true;
         }
 
-        $img_file = $this->generateThumbnail($file);
+        $img_filepath = $this->generateThumbnail($filepath, $filepath, $filetype);
 
-        if ($img_file) {
+        if ($img_filepath) {
             return true;
         }
 
         return false;
 
-
-
-        /*
-        // It seems that ImageMagick can now generate thumbnails from non-PDF's. I don't know when
-        // this started but it seems now unnecessary to convert to PDF first.
-        // KEEP FOR REFERENCE:
-
-        $pdf_exists = false;
-
-        // If it's not a PDF, we need to convert it one to be able to created the thumbnail, then
-        // delete it:
-        if ($type != 'application/pdf') {
-            // Note unoconv default export format is PDF so we don't need to specify:
-            $cmd         = 'unoconv -e PageRange=1 "' . $file . '"';
-            $output      = exec($cmd . ' 2>&1');
-            $pdf_file    = preg_replace('#\.' . $info['extension'] . '$#', '.pdf', $file);
-            #$pdf_file    = $file . '.pdf';
-            $delete_pdf_file = true;
-
-            // Did the PDF file get generated?
-            if (file_exists($pdf_file)) {
-                $pdf_exists = true;
-
-                // Set to our preferred permissions:
-                chmod($pdf_file, $this->upload_file_permissions);
-                chgrp($pdf_file, $this->upload_file_group);
-            }
-        } else {
-            $pdf_file = $file;
-            $pdf_exists = true;
-        }
-
-        // Generate the thumbnail if the PDF exists:
-        if ($pdf_exists) {
-            $thumbsize        = $this->params->get('thumbsize', '1200');
-            $imagemagick_path = 'convert';
-
-            // ---Imagemagick/Ghostscript now fails with the -colorspace flag in place.
-            // I haven't been able to figure out why, so just removing it for now as it still
-            // seems to work without it, though the colours aren't great.---
-            // UPDATE 20190603 - seems to have been resolved. At least it's working now so
-            // reinstating -colorspace to fix colours.
-            // Note "-background white -alpha remove -flatten -alpha off" adds a white background.
-            $options  = ' -strip -colorspace rgb -density 300x300 -resize ' . $thumbsize . 'x'. $thumbsize . ' -quality 90 ';
-            $cmd      = $imagemagick_path . $options . '"' . $file . '[0]" -background white -alpha remove -flatten -alpha off ' . '"' . $img_file . '"';
-            $output = exec($cmd . ' 2>&1');
-
-            // Did the image get generated?
-            if (file_exists($img_file)) {
-                // Set to our preferred permissions:
-                chmod($img_file, $this->upload_file_permissions);
-                chgrp($img_file, $this->upload_file_group);
-            }
-        }
-
-        if ($delete_pdf_file) {
-            unlink($pdf_file);
-        }
-
-        return true;
-        */
     }
 
     /**
@@ -228,22 +215,19 @@ class plgSystemAssets extends JPlugin
 
             $file = $item->tmp_name;
 
-            $img_file = $this->generateThumbnail($file);
+            $img_filepath = $this->generateThumbnail($file, $item->filepath, $item->type);
 
-            if ($img_file && file_exists($img_file)) {
-
+            if ($img_filepath && file_exists($img_filepath)) {
                 return true;
             }
 
             // Did the image get generated?
-            if (file_exists($img_file)) {
+            if (file_exists($img_filepath)) {
                 // Looks like it's going to be ok, so delete it (in case something else fails the upload):
-                unlink($img_file);
+                unlink($img_filepath);
                 return true;
             } else {
                 // Something went wrong, reject the the upload and warn the user:
-                #unlink($file);
-                //$this->upload_failed = true;
                 JError::raiseWarning(100, JText::_('PLG_SYSTEM_ASSETS_ERROR_FILE_PROCESS_FAIL'));
 
                 return false;
@@ -260,7 +244,10 @@ class plgSystemAssets extends JPlugin
             // last saved:
             $files = false;
             if (isset($data['attribs']['assets-downloads-list'])) {
-                $files = str_replace("\r", '', trim($data['attribs']['assets-downloads-list']));
+                $s = base64_decode($data['attribs']['assets-downloads-list'], true);
+                if ($s) {
+                    $files = str_replace("\r", '', trim(gzuncompress($s)));
+                }
             }
 
             if (!empty($files)) {
@@ -279,7 +266,7 @@ class plgSystemAssets extends JPlugin
 
             $new_file_list = '';
 
-            preg_match_all('#href="(\/assets/downloads/([^"]+))"#', $html, $matches, PREG_SET_ORDER);#
+            preg_match_all('#href="(\/assets/downloads/([^"]+))"#', $html, $matches, PREG_SET_ORDER);
 
             foreach ($matches as $match) {
                 $file = JPATH_ROOT . '/assets/downloads/' . urldecode($match[2]);
@@ -288,6 +275,8 @@ class plgSystemAssets extends JPlugin
                     $new_file_list .= $match[2] . "\n";
                 }
             }
+
+            $new_file_list = base64_encode(gzcompress($new_file_list));
 
             $registry = Joomla\Registry\Registry::getInstance('');
             $registry->loadString($item->attribs);
@@ -303,7 +292,7 @@ class plgSystemAssets extends JPlugin
     }
 
     /**
-	 * onAfterRender
+     * onAfterRender
      * Joomla's Media component does not handle using it for downloads. Rather than replace the
      * component or hack it about, we've ensured there's always a thumbnail of each download, so the
      * the media component is effectively tricked into displaying all the available downloads, since
@@ -314,10 +303,11 @@ class plgSystemAssets extends JPlugin
      * appears as the thumbnail src.
      * This is why thumbnails have .png appended to the full filename, rather than replacing the
      * extension.
- 	 */
-	public function onAfterRender()
-	{
+     */
+    public function onAfterRender()
+    {
         $app = JFactory::getApplication();
+
         if ($app->isClient('site')) {
             return;
         }
@@ -328,7 +318,7 @@ class plgSystemAssets extends JPlugin
             return;
         }
 
-		$response = JResponse::getBody();
+        $response = JResponse::getBody();
 
         if ($uri->getVar('view') == 'imagesList') {
             preg_match_all('#<img[^>]+src="[^"]*/assets/downloads/([^"]+)"#', $response, $matches, PREG_SET_ORDER);
@@ -352,6 +342,6 @@ class plgSystemAssets extends JPlugin
             $response = str_replace('<label for="f_url">Image URL</label>', '<label for="f_url">File URL</label>', $response);
         }
 
-		JResponse::setBody($response);
+        JResponse::setBody($response);
     }
 }
