@@ -11,8 +11,8 @@ defined('_JEXEC') or die;
 
 /*
 
-When article is saved, get list of assigned downloads and delete the unlock files.
-Parse the article HTML and generate an unlock file for each download found.
+    When article is saved, get list of assigned downloads and delete the unlock files.
+    Parse the article HTML and generate an unlock file for each download found.
 
 /*
 
@@ -52,7 +52,7 @@ class plgSystemAssets extends JPlugin
         $tmp_filepath = $tmp_copy_filepath;
 
         /*
-        // ImageMagick can generate thumbnails from non-PDF's if a suitabel delegate is install
+        // ImageMagick can generate thumbnails from non-PDF's if a suitable delegate is install
         // (e.g. LibreOffice), but KEEP FOR REFERENCE:
 
         // If it's not a PDF, we need to convert it one to be able to created the thumbnail, then
