@@ -165,6 +165,23 @@ class plgSystemAssets extends JPlugin
         return false;
 
     }
+    
+    /**
+	 * Runs on content preparation
+	 *
+	 * @param   string  $context  The context for the data
+	 * @param   object  $data     An object containing the data for the form.
+	 *
+	 * @return  boolean
+	 *
+	 * @since   1.6
+	 */
+	public function onContentPrepareData($context, $data)
+	{
+        if ($context == 'com_content.article') {
+            $data->attribs['assets-downloads-list'] = gzuncompress(base64_decode($data->attribs['assets-downloads-list'], true));
+        }
+    }
 
     /**
      * Prepare form.
@@ -244,10 +261,14 @@ class plgSystemAssets extends JPlugin
             // last saved:
             $files = false;
             if (isset($data['attribs']['assets-downloads-list'])) {
+                $s = $data['attribs']['assets-downloads-list'];
+                /* Already decoded in onContentPrepareData but keep for now.
                 $s = base64_decode($data['attribs']['assets-downloads-list'], true);
                 if ($s) {
                     $files = str_replace("\r", '', trim(gzuncompress($s)));
                 }
+                */
+                $files = str_replace("\r", '', trim($s));
             }
 
             if (!empty($files)) {
