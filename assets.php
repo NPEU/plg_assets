@@ -147,11 +147,10 @@ class plgSystemAssets extends JPlugin
 
         // Set the file to belong to our preferred owner:
         if ($upload_file_owner) {
-            chown($img_file, $upload_file_owner);
+            chown($filepath, $upload_file_owner);
         }
 
         // If this is an image file, we're done:
-        #if (!in_array($type, array('bmp', 'gif', 'jpeg', 'jpg', 'png'))) {
         if (strpos($filetype, 'image') !== false) {
             return true;
         }
@@ -165,7 +164,7 @@ class plgSystemAssets extends JPlugin
         return false;
 
     }
-    
+
     /**
 	 * Runs on content preparation
 	 *
@@ -229,6 +228,10 @@ class plgSystemAssets extends JPlugin
             // It may be tempting to remove the duplicate code in the onContentAfterSave handler,
             // BUT DON'T - other things may cause the upload to ultimately fail, so we don't want
             // to leave behind the generated image.
+
+            if (strpos($item->type, 'image') !== false) {
+                return true;
+            }
 
             $file = $item->tmp_name;
 
