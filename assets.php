@@ -178,7 +178,7 @@ class plgSystemAssets extends JPlugin
 	 */
 	public function onContentPrepareData($context, $data)
 	{
-        if ($context == 'com_content.article') {
+        if ($context == 'com_content.article' && !empty($data->attribs['assets-downloads-list'])) {
             $data->attribs['assets-downloads-list'] = gzuncompress(base64_decode($data->attribs['assets-downloads-list'], true));
         }
     }
