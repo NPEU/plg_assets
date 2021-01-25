@@ -34,26 +34,33 @@
         <fields name="params">
             <fieldset name="basic">
                 <field
-                   name="thumbsize"
-                   type="number"
-                   label="PLG_SYSTEM_ASSETS_CONFIG_THUMBSIZE_LABEL"
-                   description="PLG_SYSTEM_ASSETS_CONFIG_THUMBSIZE_DESC"
-                   default="1200"
+                    name="thumbsize"
+                    type="number"
+                    label="PLG_SYSTEM_ASSETS_CONFIG_THUMBSIZE_LABEL"
+                    description="PLG_SYSTEM_ASSETS_CONFIG_THUMBSIZE_DESC"
+                    default="1200"
                 />
                 <field
-                   name="upload_file_permissions"
-                   type="number"
-                   label="PLG_SYSTEM_ASSETS_CONFIG_FILEPERMS_LABEL"
-                   description="PLG_SYSTEM_ASSETS_CONFIG_FILEPERMS_DESC"
-                   default=""
+                    name="upload_file_permissions"
+                    type="number"
+                    label="PLG_SYSTEM_ASSETS_CONFIG_FILEPERMS_LABEL"
+                    description="PLG_SYSTEM_ASSETS_CONFIG_FILEPERMS_DESC"
+                    default=""
                 />
                 <field
-                   name="upload_file_group"
-                   type="text"
-                   label="PLG_SYSTEM_ASSETS_CONFIG_FILEGRP_LABEL"
-                   description="PLG_SYSTEM_ASSETS_CONFIG_FILEGRP_DESC"
-                   default=""
-                />
+                    name="upload_file_group"
+                    type="text"
+                    label="PLG_SYSTEM_ASSETS_CONFIG_FILEGRP_LABEL"
+                    description="PLG_SYSTEM_ASSETS_CONFIG_FILEGRP_DESC"
+                    default=""
+               />
+               <field
+                    name="upload_file_owner"
+                    type="text"
+                    label="PLG_SYSTEM_ASSETS_CONFIG_FILEOWN_LABEL"
+                    description="PLG_SYSTEM_ASSETS_CONFIG_FILEOWN_DESC"
+                    default=""
+               />
             </fieldset>
         </fields>
     </config>
