@@ -53,14 +53,14 @@
                     label="PLG_SYSTEM_ASSETS_CONFIG_FILEGRP_LABEL"
                     description="PLG_SYSTEM_ASSETS_CONFIG_FILEGRP_DESC"
                     default=""
-               />
-               <field
+                />
+                <field
                     name="upload_file_owner"
                     type="text"
                     label="PLG_SYSTEM_ASSETS_CONFIG_FILEOWN_LABEL"
                     description="PLG_SYSTEM_ASSETS_CONFIG_FILEOWN_DESC"
                     default=""
-               />
+                />
             </fieldset>
         </fields>
     </config>
