@@ -18,6 +18,10 @@
 	RewriteCond %{QUERY_STRING} s=
 	RewriteRule ^(.+)\.(png|jpg|gif)$ /plugins/system/assets/services/images/images.php [NC,L]
 
+    # Redirect requests for svg:
+	#RewriteCond %{REQUEST_FILENAME} -f
+	#RewriteRule ^(.+)\.svg$ /plugins/system/assets/services/images/svg.php [NC,L]
+
     # For downloads all we need to do is check for the presence of the unlock file.
     RewriteCond expr "%{REQUEST_URI} -strmatch '/assets/downloads/*'"
     RewriteCond %{REQUEST_URI} !\.(png|jpg|gif)$
