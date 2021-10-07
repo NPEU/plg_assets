@@ -13,11 +13,13 @@
  */
 class ImageService {
 
-    public $header      = 'HTTP/1.0 404 Not Found';
-    public $output      = '';
+    public $header       = 'HTTP/1.0 404 Not Found';
+    public $output       = '';
 
-    protected $dir_grp  = 'www-data';
-    protected $dir_perm = 0775;
+    protected $dir_grp   = false;
+    protected $dir_own   = false;
+    protected $dir_perm  = 0777;
+    protected $file_perm = false;
 
     protected $path;
     protected $pathinfo;
@@ -30,8 +32,25 @@ class ImageService {
         $this->cache_root = $this->pathinfo['dirname'];
     }
 
-    public function run()
+    public function run($permissions = array())
     {
+        if (!empty($permissions)) {
+            if (array_key_exists('dir_grp', $permissions)) {
+                $this->dir_grp = $permissions['dir_grp'];
+            }
+
+            if (array_key_exists('dir_own', $permissions)) {
+                $this->dir_own = $permissions['dir_own'];
+            }
+
+            if (array_key_exists('dir_perm', $permissions)) {
+                $this->dir_perm = $permissions['dir_perm'];
+            }
+
+            if (array_key_exists('file_perm', $permissions)) {
+                $this->file_perm = $permissions['file_perm'];
+            }
+        }
 
         $root      = $_SERVER['DOCUMENT_ROOT'];
         $cache_dir = $this->cache_root . DIRECTORY_SEPARATOR . $this->pathinfo['filename'];
@@ -62,9 +81,16 @@ class ImageService {
         // Create the folder to hold the cached images:
         if (!file_exists($root . $cache_dir)) {
             mkdir($root . $cache_dir, $this->dir_perm, true);
-            #mkdir($root . $cache_dir);
-            #chown($root . $cache_dir, $this->dir_grp);
-            #chmod($root . $cache_dir, $this->dir_perm);
+
+            if ($this->dir_grp) {
+                chgrp($root . $cache_dir, $this->dir_grp);
+            }
+
+            if ($this->dir_own) {
+                chown($root . $cache_dir, $this->dir_own);
+            }
+            
+            chmod($root . $cache_dir, $this->dir_perm);
         }
 
         $base_lastmod = filemtime($file);
@@ -129,7 +155,10 @@ class ImageService {
         if (!$r) {
             return false;
         }
-        chmod($dest_file, 0777);
+        if ($this->file_perm) {
+            chmod($dest_file, $this->file_perm);
+        }
+
         return true;
     }
 
