@@ -45,9 +45,29 @@ class plgSystemAssets extends JPlugin
         $tmp_copy_filepath = '/tmp/' . $fileinfo['basename'];
         copy($tmp_filepath, $tmp_copy_filepath);
 
-        chmod($tmp_copy_filepath, $upload_file_permissions);
-        chgrp($tmp_copy_filepath, $upload_file_group);
-        chown($tmp_copy_filepath, $upload_file_owner);
+        #echo '<pre>'; var_dump($tmp_filepath); echo ' | '; var_dump(file_exists($tmp_filepath)); echo '</pre>'; #exit;
+        #echo '<pre>'; var_dump($tmp_copy_filepath); echo ' | '; var_dump(file_exists($tmp_copy_filepath)); echo '</pre>'; exit;
+
+        //chmod($tmp_copy_filepath, $upload_file_permissions);
+        //chgrp($tmp_copy_filepath, $upload_file_group);
+        //chown($tmp_copy_filepath, $upload_file_owner);
+
+        //echo '<pre>'; var_dump($this->params->get('upload_file_permissions', false)); echo '</pre>'; exit;
+
+        if ($upload_file_permissions) {
+            //chmod($tmp_copy_filepath, $upload_file_permissions);
+            chmod($tmp_copy_filepath, octdec('770'));
+        }
+
+        // Set the file to belong to our preferred group:
+        if ($upload_file_group) {
+            chgrp($tmp_copy_filepath, $upload_file_group);
+        }
+
+        // Set the file to belong to our preferred owner:
+        if ($upload_file_owner) {
+            chown($tmp_copy_filepath, $upload_file_owner);
+        }
 
         $tmp_filepath = $tmp_copy_filepath;
 
@@ -65,6 +85,14 @@ class plgSystemAssets extends JPlugin
             $pdf_file    = preg_replace('#\.' . $info['extension'] . '$#', '.pdf', $file);
         }
         */
+
+        // PDF's that aren't A4 seem to default to A4, so see if we can fix that:
+        // UPDATE this happened for PDF's exported from Excel where you select (just the chart) or
+        // similar. For some reason that doesn't work very well and retains an A4 media box.
+        // Printing those PDF's to another PDF solved the problem, and I wasn't able to find a way
+        // to fix this here.
+        /*if ($filetype == 'application/pdf') {
+        }*/
 
 
         // We just add .png to the thumbnail filename so we can determine the real filename in the
@@ -84,7 +112,7 @@ class plgSystemAssets extends JPlugin
         $cmd      = $imagemagick_path . $options . '"' . $tmp_filepath . '[0]" -background white -alpha remove -flatten -alpha off ' . '"' . $img_filepath . '"';
         $output = exec($cmd . ' 2>&1');
 
-        // Delete any temmporary PDF:
+        // Delete any temporary PDF:
         if (file_exists($tmp_copy_filepath)) {
             unlink($tmp_copy_filepath);
         }
