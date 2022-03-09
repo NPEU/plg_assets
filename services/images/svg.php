@@ -9,10 +9,12 @@ $pathinfo   = pathinfo($path);
 
 $svg = file_get_contents($_SERVER['DOCUMENT_ROOT'] . '/' . $path);
 
-preg_match('/viewBox="([^"]+)"/', $svg, $matches);
-$viewbox = explode(' ', $matches[1]);
+if (!empty($_SERVER['JTV2'])) {
+    preg_match('/viewBox="([^"]+)"/', $svg, $matches);
+    $viewbox = explode(' ', $matches[1]);
 
-$svg = str_replace($matches[0], $matches[0] . ' preserveAspectRatio="xMidYMid meet" width="' . $viewbox[2] . 'px" height="' . $viewbox[3] . 'px"', $svg);
+    $svg = str_replace($matches[0], $matches[0] . ' preserveAspectRatio="xMidYMid meet" width="' . $viewbox[2] . 'px" height="' . $viewbox[3] . 'px"', $svg);
+}
 
 header('Content-Type: image/svg+xml');
 echo $svg;
