@@ -350,7 +350,7 @@ class plgSystemAssets extends JPlugin
      * the media component is effectively tricked into displaying all the available downloads, since
      * there always exists a matching image (the Media Component will only show images when opened
      * as a model for the Image file input, and there isn't a Downloads equivalent).
-     * However, we need to make the sure actual file path is passed back to the editor, so we need
+     * However, we need to make sure the actual file path is passed back to the editor, so we need
      * to replace all occurrences of the image filename with the download filename, except where it
      * appears as the thumbnail src.
      * This is why thumbnails have .png appended to the full filename, rather than replacing the
@@ -382,7 +382,7 @@ class plgSystemAssets extends JPlugin
                 $response = str_replace($match[0], '<<<TMP-IMAGE>>>', $response);
 
                 // Replace all other occurrences of the filename:
-                $response = str_replace($info['basename'], $info['filename'], $response);
+                $response = str_replace('/' . $info['basename'], '/'  . $info['filename'], $response);
 
                 // Restore the image tag:
                 $response = str_replace('<<<TMP-IMAGE>>>', $match[0], $response);
