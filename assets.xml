@@ -10,17 +10,17 @@
     <license>MIT License; see LICENSE.md</license>
 
     <!--  The version string is recorded in the components table -->
-    <version>1.12.0</version>
+    <version>1.13.0</version>
     <!-- The description is optional and defaults to the name -->
     <description>PLG_SYSTEM_ASSETS_XML_DESCRIPTION</description>
-    
+
     <scriptfile>assets.script.php</scriptfile>
 
     <updateservers>
         <!-- Note: No spaces or linebreaks allowed between the server tags -->
         <server type="extension" name="NPEU: plg_assets Update Site">https://raw.githubusercontent.com/NPEU/plg_assets/master/update-manifest.xml</server>
     </updateservers>
-    
+
     <files>
         <filename plugin="assets">assets.php</filename>
         <filename>assets.htaccess.txt</filename>
