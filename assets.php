@@ -179,7 +179,10 @@ class plgSystemAssets extends JPlugin
         }
 
         // If this is an image file, we're done:
-        if (strpos($filetype, 'image') !== false) {
+        if (
+            strpos($filetype, 'image') !== false
+         || strpos($filetype, 'audio/mpeg') !== false
+        ) {
             return true;
         }
 
@@ -257,7 +260,10 @@ class plgSystemAssets extends JPlugin
             // BUT DON'T - other things may cause the upload to ultimately fail, so we don't want
             // to leave behind the generated image.
 
-            if (strpos($item->type, 'image') !== false) {
+            if (
+                strpos($item->type, 'image') !== false
+             || strpos($item->type, 'audio/mpeg') !== false
+            ) {
                 return true;
             }
 
