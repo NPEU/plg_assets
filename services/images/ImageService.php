@@ -24,6 +24,8 @@ class ImageService {
     protected $path;
     protected $pathinfo;
     public $cache_root;
+    public $uri_rewrites = [];
+    public $uri_appends  = [];
 
     public function __construct()
     {
@@ -34,6 +36,13 @@ class ImageService {
 
     public function run($permissions = array())
     {
+        foreach($this->uri_rewrites as $pattern=>$replace) {
+            $this->path = preg_replace('#' . $pattern . '#', $replace, $this->path);
+        }
+        foreach($this->uri_appends as $append) {
+            $this->path .= $append;
+        }
+
         if (!empty($permissions)) {
             if (array_key_exists('dir_grp', $permissions)) {
                 $this->dir_grp = $permissions['dir_grp'];
@@ -59,6 +68,11 @@ class ImageService {
         // This isn't really necessary as .htaccess already checked the base file exists, but
         // included just in case:
         if (!file_exists($file)) {
+            return;
+        }
+
+        if (empty($_GET['s'])) {
+            $this->setResult($file);
             return;
         }
 
@@ -89,7 +103,7 @@ class ImageService {
             if ($this->dir_own) {
                 chown($root . $cache_dir, $this->dir_own);
             }
-            
+
             chmod($root . $cache_dir, $this->dir_perm);
         }
 
@@ -115,6 +129,7 @@ class ImageService {
         $src_data = getimagesize($src_file);
         $src_w    = $src_data[0];
         $src_h    = $src_data[1];
+
         if ($minmax == '') {
             if ($src_w > $src_h) {
                 $dst_h = round($size * ($src_h / $src_w));

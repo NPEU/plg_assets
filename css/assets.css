@@ -1,0 +1,43 @@
+/*
+    Fix media views
+*/
+
+.media-browser-item {
+    margin-bottom: 0.75em;
+    margin-top: 0.755em;
+}
+
+.media-browser-image,
+.media-browser-doc {
+    position: relative;
+}
+
+.media-browser-image::before,
+.media-browser-doc::before {
+    font-size: 0.6em;
+    border: 1px solid #ccc;
+    padding: 0.3em 0.6em;
+    position: absolute;
+    z-index: 1;
+    top: -1em;
+    left: -0.4em;
+    border-radius: 0.4em;
+    background: #eee;
+}
+
+.media-browser-doc::before {
+    content: "FILE";
+}
+
+.media-browser-image::before {
+    content: "IMAGE";
+}
+
+.media-browser-image:hover::before,
+.media-browser-doc:hover::before {
+    opacity: 0.5;
+}
+
+.media-browser-select {
+    z-index: 1;
+}

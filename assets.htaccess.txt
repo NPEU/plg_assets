@@ -5,22 +5,29 @@
 # whenever that extension is updated, so DO NOT MAKE CHANGES HERE.
 # ----------------------------------------------------------------------
 <IfModule mod_rewrite.c>
-	Options +FollowSymlinks
-	RewriteEngine On
-	RewriteBase /
+    Options +FollowSymlinks
+    RewriteEngine On
+    RewriteBase /
 
     # File info requests are appended with .json
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^(.+)\.(json)$ /plugins/system/assets/services/fileinfo/fileinfo.php?format=$2 [NC,L]
 
+    # Download previews need to be handled separately from other images.
+    RewriteCond expr "%{REQUEST_URI} -strmatch '/assets/downloads/*'"
+    RewriteCond %{REQUEST_URI} \.(png|jpg|gif)$
+    RewriteCond "%{REQUEST_FILENAME}.preview" -f
+    RewriteRule ^(.+)\.(png|jpg|gif)$ /plugins/system/assets/services/images/images.php [NC,L]
+
     # Redirect requests for images:
-	RewriteCond %{REQUEST_FILENAME} -f
-	RewriteCond %{QUERY_STRING} s=
-	RewriteRule ^(.+)\.(png|jpg|gif)$ /plugins/system/assets/services/images/images.php [NC,L]
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteCond %{QUERY_STRING} s=
+    RewriteRule ^(.+)\.(png|jpg|gif)$ /plugins/system/assets/services/images/images.php [NC,L]
 
     # Redirect requests for svg:
-	RewriteCond %{REQUEST_FILENAME} -f
-	RewriteRule ^(.+)\.svg$ /plugins/system/assets/services/images/svg.php [NC,L]
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^(.+)\.svg$ /plugins/system/assets/services/images/svg.php [NC,L]
+
 
     # For downloads all we need to do is check for the presence of the unlock file.
     RewriteCond expr "%{REQUEST_URI} -strmatch '/assets/downloads/*'"
