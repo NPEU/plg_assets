@@ -22,13 +22,13 @@
     <scriptfile>assets.script.php</scriptfile>
     <namespace path="src">NPEU\Plugin\System\Assets</namespace>
     <files>
+        <filename>assets.htaccess.txt</filename>
+        <folder plugin="assets">src</folder>
         <folder>css</folder>
         <folder>forms</folder>
         <folder>js</folder>
         <folder>language</folder>
         <folder>services</folder>
-        <folder plugin="assets">src</folder>
-        <filename>assets.htaccess.txt</filename>
     </files>
 
     <config>
