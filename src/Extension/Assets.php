@@ -201,8 +201,8 @@ class Assets extends CMSPlugin implements SubscriberInterface
 
             // Here we're prematurely creating the file (prefixed 'tmp.') so that we can generate
             // the thumbnail in order to check for success of thumbnail. Both these files are then
-            // deleted so that if anythign fails no files are lift behind to cause problems.
-            // If everything is ok these files a created again by the normal subsequest processes,
+            // deleted so that if anything fails no files are left behind to cause problems.
+            // If everything is ok these files a created again by the normal subsequent processes,
             $tmp_name = 'tmp.' . $object->name;
 
             // Create the file:
