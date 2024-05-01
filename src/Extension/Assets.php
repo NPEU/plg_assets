@@ -201,8 +201,8 @@ class Assets extends CMSPlugin implements SubscriberInterface
 
             // Here we're prematurely creating the file (prefixed 'tmp.') so that we can generate
             // the thumbnail in order to check for success of thumbnail. Both these files are then
-            // deleted so that if anything fails no files are left behind to cause problems.
-            // If everything is ok these files a created again by the normal subsequent processes,
+            // deleted so that if anythign fails no files are lift behind to cause problems.
+            // If everything is ok these files a created again by the normal subsequest processes,
             $tmp_name = 'tmp.' . $object->name;
 
             // Create the file:
@@ -468,7 +468,7 @@ class Assets extends CMSPlugin implements SubscriberInterface
         }
         $document = Factory::getDocument();
         $plugin_folder = str_replace(JPATH_ROOT, '', dirname(dirname(__DIR__)));
-        Log::add(print_r($plugin_folder, true));
+        #Log::add(print_r($plugin_folder, true));
         $document->addStyleSheet($plugin_folder . '/css/assets.css');
         $document->addScript($plugin_folder . '/js/assets.js');
     }
