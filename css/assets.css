@@ -25,13 +25,22 @@
     background: #eee;
 }
 
-.media-browser-doc::before {
-    content: "FILE";
-}
-
 .media-browser-image::before {
     content: "IMAGE";
 }
+
+.media-browser-image.is_file::before {
+    content: "FILE";
+}
+
+.media-browser-image.is_file::before {
+    content: "FILE";
+}
+
+.media-browser-image.is_file[data-filetype]::before {
+    content: "FILE: " attr(data-filetype);
+}
+
 
 .media-browser-image:hover::before,
 .media-browser-doc:hover::before {

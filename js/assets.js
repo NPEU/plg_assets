@@ -23,18 +23,30 @@
                 // 2nd option would run the changes per-file, would this be very slow?
 
                 var elements_1 = com_media.querySelectorAll('.media-browser-item > :not(.media-browser-item-directory)');
+                //console.log(path);
                 Array.prototype.forEach.call(elements_1, function (el, i) {
+                    // Check for type of item:
+                    var item_container = el.querySelector('.media-browser-item-preview');
+                    var filename = item_container.getAttribute('title');
+                    var extension = filename.split('.').pop();
+                    //console.log(extension);
+                    if (!extension.match(/(jpg|png)/)) {
+                        el.classList.add('is_file');
+                        el.dataset.filetype = extension;
+                    }
+
                     // Look to see if the image is set or not:
-                    var preview_container = el.querySelector('.media-browser-item-preview >.file-background');
+                    var preview_container = item_container.querySelector('.image-background');
+                    //
                     //return;
                     if (preview_container) {
-                        preview_container.classList.remove('file-background');
-                        preview_container.classList.add('image-background');
+
+                        //preview_container.classList.add('image-background');
                         var img = preview_container.querySelector('img');
                         if (!img) {
                             let info_container = el.querySelector('.media-browser-item-info');
                             let file = path + '/' + info_container.textContent.trim() + '.png';
-
+                            //console.log(info_container.textContent);
                             var width = '100';
                             var height = '100';
 

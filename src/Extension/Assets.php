@@ -135,7 +135,8 @@ class Assets extends CMSPlugin implements SubscriberInterface
 
         // We just add .png to the thumbnail filename so we can determine the real filename in the
         // 'Downloads Media Hack' (see elsewhere):
-        $img_filepath = $filepath . '.png.preview';
+        #$img_filepath = $filepath . '.png.preview';
+        $img_filepath = $filepath . '.png';
 
         $thumbsize        = $this->params->get('thumbsize', '1200');
 
@@ -168,7 +169,8 @@ class Assets extends CMSPlugin implements SubscriberInterface
                 chown($img_filepath, $upload_file_owner);
             }
 
-            return $img_filepath;
+            rename($img_filepath, $img_filepath . '.preview');
+            return $img_filepath . '.preview';
         } else {
             return false;
         }
