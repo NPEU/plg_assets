@@ -1,12 +1,20 @@
 <?php
-namespace NPEU\Plugin\System\Assets;
+/**
+ * @package     Joomla.Site
+ * @subpackage  plg_assets
+ *
+ * @copyright   Copyright (C) NPEU 2024.
+ * @license     MIT License; see LICENSE.md
+ */
+
 
 defined('_JEXEC') or die;
 
 use Joomla\CMS\Filesystem\File;
 use Joomla\CMS\Filesystem\Folder;
+use Joomla\CMS\Installer\Adapter\PluginAdapter;
 
-class plgSystemAssetsInstallerScript
+class PlgSystemAssetsInstallerScript
 {
     protected $plugin_dir = JPATH_ROOT . '/plugins/system/assets';
 
@@ -22,10 +30,10 @@ class plgSystemAssetsInstallerScript
      *
      * @return  boolean  True on success
      */
-    public function postflight($route, JAdapterInstance $adapter)
+    public function postflight(string $type, PluginAdapter  $adapter): bool
     {
-        if (!($route == 'install' || $route == 'update')) {
-            return;
+        if (!($type == 'install' || $type == 'update')) {
+            return false;
         }
 
         // Move latest version of htaccess file:
@@ -45,9 +53,10 @@ class plgSystemAssetsInstallerScript
      *
      * @param   JAdapterInstance  $adapter  The object responsible for running this script
      */
-    public function uninstall(JAdapterInstance $adapter)
+    public function uninstall(PluginAdapter  $adapter): bool
     {
         File::delete(JPATH_ROOT . $this->assets_dir . '/.htaccess');
+        return true;
     }
 }
 ?>
