@@ -281,7 +281,8 @@ class Assets extends CMSPlugin implements SubscriberInterface
 
             preg_match_all('#href="(\/assets/downloads/([^"]+))"#', $html, $matches, PREG_SET_ORDER);
             foreach ($matches as $match) {
-                $file = JPATH_ROOT . '/assets/downloads/' . urldecode($match[2]) . '.download';
+                #$file = JPATH_ROOT . '/assets/downloads/' . urldecode($match[2]) . '.download';
+                $file = JPATH_ROOT . '/assets/downloads/' . urldecode($match[2]);
                 if (file_exists($file)) {
                     File::write($file . '.unlock', time());
                     $new_file_list .= $match[2] . "\n";
