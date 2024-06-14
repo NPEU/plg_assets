@@ -209,19 +209,21 @@ class Assets extends CMSPlugin implements SubscriberInterface
 
             // Create the file:
             $filename = $this->getAdapter($object->adapter)->createFile($tmp_name, $object->path, $object->data);
-
+            #Log::add($filename); #exit;
             if (!$filename) {
                 throw new GenericDataException(Text::_('PLG_SYSTEM_ASSETS_ERROR_FILE_CREATE_FAIL'), 100);
                 return;
             }
 
             $img_filepath = $this->generateThumbnail($root_files_path . $object->path . '/' . $filename);
+            $tmp_filepath = $root_files_path . $object->path . '/' . $filename;
 
             // Did the image get generated?
             if (file_exists($img_filepath)) {
                 // Looks like it's going to be ok, so delete it (in case something else fails the upload):
                 File::delete($img_filepath);
-                $this->getAdapter($object->adapter)->delete($object->path . '/' . $tmp_name);
+                File::delete($tmp_filepath);
+                #$this->getAdapter($object->adapter)->delete($root_files_path . $object->path . '/' . $tmp_name);
                 return;
             } else {
                 // Something went wrong, reject the the upload and warn the user:
