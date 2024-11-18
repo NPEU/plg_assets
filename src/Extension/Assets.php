@@ -189,7 +189,6 @@ class Assets extends CMSPlugin implements SubscriberInterface
 
         // Check if we're saving an media file:
         if ($context == 'com_media.file') {
-
             $media_files_path = ComponentHelper::getParams('com_media')->get('file_path', 'images');
             $root_files_path = JPATH_ROOT .'/' . $media_files_path;
 
@@ -209,14 +208,28 @@ class Assets extends CMSPlugin implements SubscriberInterface
 
             // Create the file:
             $filename = $this->getAdapter($object->adapter)->createFile($tmp_name, $object->path, $object->data);
+
             #Log::add($filename); #exit;
             if (!$filename) {
                 throw new GenericDataException(Text::_('PLG_SYSTEM_ASSETS_ERROR_FILE_CREATE_FAIL'), 100);
                 return;
             }
 
-            $img_filepath = $this->generateThumbnail($root_files_path . $object->path . '/' . $filename);
+
             $tmp_filepath = $root_files_path . $object->path . '/' . $filename;
+
+            // Dont' try to generagte thumbnails for ZIP files:
+            $mime_type = mime_content_type($tmp_filepath);
+            if ($mime_type == 'application/zip' || $mime_type == 'application/x-zip') {
+                File::delete($tmp_filepath);
+                return;
+            }
+
+            $img_filepath = $this->generateThumbnail($root_files_path . $object->path . '/' . $filename);
+
+            #Log::add(mime_content_type($tmp_filepath)); exit;
+
+
 
             // Did the image get generated?
             if (file_exists($img_filepath)) {
@@ -352,6 +365,12 @@ class Assets extends CMSPlugin implements SubscriberInterface
             strpos($filetype, 'image') !== false
          || strpos($filetype, 'audio/mpeg') !== false
         ) {
+            return;
+        }
+
+        // Dont' try to generagte thumbnails for ZIP files:
+        $mime_type = mime_content_type($full_path);
+        if ($mime_type == 'application/zip' || $mime_type == 'application/x-zip') {
             return;
         }
 
