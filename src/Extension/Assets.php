@@ -299,7 +299,8 @@ class Assets extends CMSPlugin implements SubscriberInterface
                 #$file = JPATH_ROOT . '/assets/downloads/' . urldecode($match[2]) . '.download';
                 $file = JPATH_ROOT . '/assets/downloads/' . urldecode($match[2]);
                 if (file_exists($file)) {
-                    File::write($file . '.unlock', time());
+                    $time = time();
+                    File::write($file . '.unlock', $time);
                     $new_file_list .= $match[2] . "\n";
                 }
             }
