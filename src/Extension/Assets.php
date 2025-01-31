@@ -43,6 +43,8 @@ class Assets extends CMSPlugin implements SubscriberInterface
      */
     protected static $enabled = false;
 
+    protected $old_content = false;
+
     /**
      * Constructor
      *
@@ -84,7 +86,8 @@ class Assets extends CMSPlugin implements SubscriberInterface
      *
      * @return  mixed   The image filename or false on failure
      */
-    protected function generateThumbnail($filepath) {
+    protected function generateThumbnail($filepath)
+    {
         $upload_file_permissions = octdec($this->params->get('upload_file_permissions', false));
         $upload_file_group       = $this->params->get('upload_file_group', false);
         $upload_file_owner       = $this->params->get('upload_file_owner', false);
@@ -177,6 +180,27 @@ class Assets extends CMSPlugin implements SubscriberInterface
     }
 
     /**
+     *
+     * @param   string  $html  The file to be converted.
+     *
+     * @return  array   The array of download files found.
+     */
+    protected function findDownloads($html)
+    {
+        $downloads = [];
+
+        preg_match_all('#href="(\/assets/downloads/([^"]+))"#', $html, $matches, PREG_SET_ORDER);
+        foreach ($matches as $match) {
+            $file = JPATH_ROOT . '/assets/downloads/' . urldecode($match[2]);
+            if (file_exists($file)) {
+                $downloads[] = $file;
+            }
+        }
+
+        return $downloads;
+    }
+
+    /**
      * The save event.
      *
      * @param   Event  $event
@@ -229,8 +253,6 @@ class Assets extends CMSPlugin implements SubscriberInterface
 
             #Log::add(mime_content_type($tmp_filepath)); exit;
 
-
-
             // Did the image get generated?
             if (file_exists($img_filepath)) {
                 // Looks like it's going to be ok, so delete it (in case something else fails the upload):
@@ -246,74 +268,26 @@ class Assets extends CMSPlugin implements SubscriberInterface
                 return;
             }
 
-            return;
         }
 
 
         // The following is a totally seperate part of the mechanism to the file thumb generation
         // above. It just happens to need to hook into the same event. Don't get confused, they
         // are separate.
-
         // Check if we're saving an article:
         if ($context == 'com_content.article') {
-            #echo '<pre>'; var_dump($data); echo '</pre>'; exit;
-            // NEW! I think here I will have to alter the paths to check for and generate unlock
-            // files in the new hidden downloads folder
-            // !Maybe! - the .htaccess maybe easier (only possible) with unloack files in the same
-            // dir not sure. unlock files won't show up in the Media Manager I don't think (unless
-            // the extension is added to the config)
-            // OR - perhaps we add an extra extension to hide the real download and htaccess that
-            // away???
+            // We need to capture the content before it's saved so we acan compare the downloads
 
-            // Delete the unlock files of all files that were assigned to this article when it was
-            // last saved:
-            $files = false;
-            if (isset($data['attribs']['assets-downloads-list'])) {
-                $s = $data['attribs']['assets-downloads-list'];
-                /* Already decoded in onContentPrepareData but keep for now.
-                $s = base64_decode($data['attribs']['assets-downloads-list'], true);
-                if ($s) {
-                    $files = str_replace("\r", '', trim(gzuncompress($s)));
-                }
-                */
-                $files = str_replace("\r", '', trim($s));
+            $id = $object->id;
+
+            if (!$isNew) {
+                // Get old article:
+                $app = Factory::getApplication();
+                $article_model = $app->bootComponent('com_content')->getMVCFactory()->createModel('Article', 'Administrator', ['ignore_request' => true]);
+                $article = $article_model->getItem($id);
+
+                $this->old_content = $article->introtext . $article->fulltext;
             }
-
-            if (!empty($files)) {
-                $files = explode("\n", $files);
-
-                foreach ($files as $file) {
-                    $file = JPATH_ROOT . '/assets/downloads/' . urldecode($file) . '.unlock';
-                    if (file_exists($file)) {
-                        File::delete($file);
-                    }
-                }
-            }
-
-            // Next, get all the files now associated with the article:
-            $html = $data['articletext'];
-            $new_file_list = '';
-
-            preg_match_all('#href="(\/assets/downloads/([^"]+))"#', $html, $matches, PREG_SET_ORDER);
-            foreach ($matches as $match) {
-                #$file = JPATH_ROOT . '/assets/downloads/' . urldecode($match[2]) . '.download';
-                $file = JPATH_ROOT . '/assets/downloads/' . urldecode($match[2]);
-                if (file_exists($file)) {
-                    $time = time();
-                    File::write($file . '.unlock', $time);
-                    $new_file_list .= $match[2] . "\n";
-                }
-            }
-            $new_file_list = base64_encode(gzcompress($new_file_list));
-
-            $registry = new Registry;
-            $registry->loadString($object->attribs);
-            $registry['assets-downloads-list'] = $new_file_list;
-            $new_attribs = $registry->toString();
-
-            $object->attribs = $new_attribs;
-
-            return;
         }
 
         return;
@@ -330,57 +304,184 @@ class Assets extends CMSPlugin implements SubscriberInterface
         [$context, $object, $isNew] = array_values($event->getArguments());
 
         // Check if we're saving an media file:
-        if ($context != 'com_media.file') {
-            return;
+        if ($context == 'com_media.file') {
+            #Log::add('Saving a file...');
+
+            $media_files_path = ComponentHelper::getParams('com_media')->get('file_path', 'images');
+            $root_files_path = JPATH_ROOT .'/' . $media_files_path;
+
+            $full_path = $root_files_path . $object->path . '/' . $object->name;
+            #Log::add(print_r($full_path, true)); #exit;
+            $filetype = mime_content_type($full_path);
+            #Log::add(print_r($filetype, true)); #exit;
+
+            $upload_file_permissions = octdec($this->params->get('upload_file_permissions', false));
+            $upload_file_group       = $this->params->get('upload_file_group', false);
+            $upload_file_owner       = $this->params->get('upload_file_owner', false);
+
+            // Set the file to our preferred permissions:
+            if ($upload_file_permissions) {
+                chmod($full_path, $upload_file_permissions);
+            }
+
+            // Set the file to belong to our preferred group:
+            if ($upload_file_group) {
+                chgrp($full_path, $upload_file_group);
+            }
+
+            // Set the file to belong to our preferred owner:
+            if ($upload_file_owner) {
+                chown($full_path, $upload_file_owner);
+            }
+
+            // If this is an image or audio file, we're done:
+            if (
+                strpos($filetype, 'image') !== false
+            || strpos($filetype, 'audio/mpeg') !== false
+            ) {
+                return;
+            }
+
+            // Dont' try to generagte thumbnails for ZIP files:
+            $mime_type = mime_content_type($full_path);
+            if ($mime_type == 'application/zip' || $mime_type == 'application/x-zip') {
+                return;
+            }
+
+            $img_filepath = $this->generateThumbnail($full_path);
+
+            /*if ($img_filepath) {
+                // Rename them to add a .download extension or something?
+                File::move($full_path, $full_path . '.download');
+            }*/
         }
 
-        $media_files_path = ComponentHelper::getParams('com_media')->get('file_path', 'images');
-        $root_files_path = JPATH_ROOT .'/' . $media_files_path;
 
-        $full_path = $root_files_path . $object->path . '/' . $object->name;
-        #Log::add(print_r($full_path, true)); exit;
-        $filetype = mime_content_type($full_path);
-        #Log::add(print_r($mime_type, true)); exit;
+        // The following is a totally seperate part of the mechanism to the file thumb generation
+        // above. It just happens to need to hook into the same event. Don't get confused, they
+        // are separate.
 
-        $upload_file_permissions = octdec($this->params->get('upload_file_permissions', false));
-        $upload_file_group       = $this->params->get('upload_file_group', false);
-        $upload_file_owner       = $this->params->get('upload_file_owner', false);
+        $new_content = '';
+        $old_downloads = false;
+        $new_downloads = false;
 
-        // Set the file to our preferred permissions:
-        if ($upload_file_permissions) {
-            chmod($full_path, $upload_file_permissions);
+        $proccess_unlock_files = false;
+
+        // Check if we're saving an article:
+        if ($context == 'com_content.article') {
+            $proccess_unlock_files = true;
+            #echo '<pre>'; var_dump($object->id); echo '</pre>'; exit;
+            #echo '<pre>'; var_dump($isNew); echo '</pre>'; exit;
+            $new_content = $object->introtext . $object->fulltext;
+            $id = $object->id;
+            $item_id = $context . '.' . $id;
+
+            /*if (!$isNew) {
+                // Get old article:
+                $article_model = $app->bootComponent('com_content')->getMVCFactory()->createModel('Article', 'Administrator', ['ignore_request' => true]);
+                $article = $article_model->getItem($id);
+
+                $old_content = $article->introtext . $article->fulltext;
+            }*/
         }
 
-        // Set the file to belong to our preferred group:
-        if ($upload_file_group) {
-            chgrp($full_path, $upload_file_group);
+        // Check other supported contexts here...
+
+        if ($proccess_unlock_files) {
+            // I think here, now, that it needs to run like this:
+            // Get the content BEFORE it's saved.
+            // Find any downloads that WERE unlocked by it.
+            // Delete any files that are ONLY lock by it.
+            // OR
+            // Remove the content identifier from the unlock files.
+            // Then, we need to find downlaods in the CURRENT content and generate or append unlock
+            // files for those downloads.
+
+
+            $new_downloads = $this->findDownloads($new_content);
+
+            #echo '<pre>'; var_dump($new_downloads); echo '</pre>'; exit;
+            if (!empty($new_downloads)) {
+                // New downloads = downloads that appear in the content that's being save; we need
+                // to unlock these files:
+                foreach ($new_downloads as $file) {
+                    $id_list = false;
+                    $unlock_file = $file . '.unlock';
+                    // Check for existing unlock file:
+                    if (file_exists($unlock_file)) {
+                        // Get the contents of the unlock file:
+                        $id_list = json_decode(file_get_contents($unlock_file), true);
+                    }
+                    // Add the new download:
+                    if (!is_array($id_list)) {
+                        $id_list = [];
+                    }
+                    if (!in_array($item_id, $id_list)) {
+                        $id_list[] = $item_id;// !!!! < THIS. we're overriding the array value for the
+                        // wrong file when there are multiple new downloads.
+                        // DO WE NEED TO RECORD IT AT ALL THOUGH? Can't we just record the item id's
+                        // that lock the file?
+                        // See old downloads section for....I think it should be ok
+                    }
+                    file_put_contents($unlock_file, json_encode($id_list));
+                }
+            }
+            #return;
+            #echo '<pre>'; var_dump($this->old_content); echo '</pre>'; exit;
+            if ($this->old_content) {
+                // Next we need to update unlock files and delete orphaned unlock ones (files which
+                // used to be unlockled by this item but aren't any more, and aren't by anything
+                // else).
+                $old_downloads = $this->findDownloads($this->old_content);
+
+                if (!empty($old_downloads)) {
+                    // Which downloads no longer appear in the new content:
+                    $diff = array_diff($old_downloads, $new_downloads);
+                    #Log::add('Diff: ' . print_r($diff, true));
+                    #echo '<pre>'; var_dump($diff); echo '</pre>'; exit;
+                    if ($diff) {
+                        foreach ($diff as $file) {
+                            $unlock_file = $file . '.unlock';
+                            #echo '<pre>'; var_dump(file_exists($unlock_file)); echo '</pre>'; exit;
+                            #Log::add('unlock_file: ' . print_r($unlock_file, true));
+                            #Log::add('exists? ' . print_r(file_exists($unlock_file), true));
+                            if (file_exists($unlock_file)) {
+                                // Inspect the contents of the unlock file:
+                                $id_list = json_decode(file_get_contents($unlock_file), true);
+                                #echo '<pre>'; var_dump($id_list); echo '</pre>'; exit;
+                                #Log::add('id_list: ' . print_r($id_list, true));
+                                $can_delete = false;
+                                if (!$id_list) {
+                                    $can_delete = true;
+                                } else {
+                                    #Log::add('item_id: ' . print_r($item_id, true));
+                                    #Log::add('in id_list? ' . print_r(array_key_exists($item_id, $id_list), true));
+
+                                    #echo '<pre>'; var_dump($item_id); echo '</pre>'; #exit;
+                                    #echo '<pre>'; var_dump(array_key_exists($item_id, $id_list)); echo '</pre>'; exit;
+                                    // If this item previous unlocked this file, remove it:
+                                    if (in_array($item_id, $id_list)) {
+                                        unset($id_list[array_search($item_id, $id_list)]);
+                                    }
+                                    // If there are no items left we can delete the unlock file:
+                                    if (count($id_list) == 0) {
+                                        $can_delete = true;
+                                    } else {
+                                        file_put_contents($unlock_file, json_encode($id_list));
+                                    }
+                                }
+                                #Log::add('can_delete: ' . print_r($can_delete, true));
+                                if ($can_delete) {
+                                    File::delete($unlock_file);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
         }
 
-        // Set the file to belong to our preferred owner:
-        if ($upload_file_owner) {
-            chown($full_path, $upload_file_owner);
-        }
-
-        // If this is an image file, we're done:
-        if (
-            strpos($filetype, 'image') !== false
-         || strpos($filetype, 'audio/mpeg') !== false
-        ) {
-            return;
-        }
-
-        // Dont' try to generagte thumbnails for ZIP files:
-        $mime_type = mime_content_type($full_path);
-        if ($mime_type == 'application/zip' || $mime_type == 'application/x-zip') {
-            return;
-        }
-
-        $img_filepath = $this->generateThumbnail($full_path);
-
-        /*if ($img_filepath) {
-            // Rename them to add a .download extension or something?
-            File::move($full_path, $full_path . '.download');
-        }*/
 
         return;
 
@@ -389,33 +490,30 @@ class Assets extends CMSPlugin implements SubscriberInterface
     /**
      * The delete event.
      *
-     * @param   string    $context  The context
-     * @param   \stdClass  $item     The item
+     * @param   Event  $event
      *
      * @return  void
-     *
-     * @since   3.7.0
      */
     public function onContentAfterDelete(Event $event): void
     {
-        [$context, $item] = array_values($event->getArguments());
+        [$context, $object] = array_values($event->getArguments());
 
         // Check if we're saving an media file:
         if ($context != 'com_media.file') {
             return;
         }
 
-        // File has been deleted, if this is a PNG preview we need to also delete the corresponding
-        // .download and .unlock files.
         $media_files_path = ComponentHelper::getParams('com_media')->get('file_path', 'images');
         $root_files_path = JPATH_ROOT .'/' . $media_files_path;
 
-        $download_file = $root_files_path . preg_replace('#\.png$#','.download', $item->path);
-        if (file_exists($download_file)) {
-            File::delete($download_file);
+        $full_path = $root_files_path . $object->path;
+
+        $preview_file = $full_path . '.png.preview';
+        if (file_exists($preview_file)) {
+            File::delete($preview_file);
         }
 
-        $unlock_file = $root_files_path . preg_replace('#\.png$#','.unlock', $item->path);
+        $unlock_file = $full_path . '.unlock';
         if (file_exists($unlock_file)) {
             File::delete($unlock_file);
         }
