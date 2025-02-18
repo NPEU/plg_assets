@@ -564,7 +564,7 @@ class Assets extends CMSPlugin implements SubscriberInterface
     {
         [$form, $data] = array_values($event->getArguments());
 
-        if (!($form instanceof \Joomla\CMS\Form\Form)) {
+        if ($form && !($form instanceof \Joomla\CMS\Form\Form)) {
             $this->_subject->setError('JERROR_NOT_A_FORM');
             return;
         }
