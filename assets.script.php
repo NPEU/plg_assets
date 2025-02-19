@@ -12,7 +12,6 @@ defined('_JEXEC') or die;
 
 use Joomla\CMS\Filesystem\File;
 use Joomla\CMS\Filesystem\Folder;
-use Joomla\CMS\Installer\Adapter\PluginAdapter;
 
 class PlgSystemAssetsInstallerScript
 {
@@ -30,7 +29,7 @@ class PlgSystemAssetsInstallerScript
      *
      * @return  boolean  True on success
      */
-    public function postflight(string $type, PluginAdapter  $adapter): bool
+    public function postflight(string $type, JAdapterInstance $adapter): bool
     {
         if (!($type == 'install' || $type == 'update')) {
             return false;
@@ -53,7 +52,7 @@ class PlgSystemAssetsInstallerScript
      *
      * @param   JAdapterInstance  $adapter  The object responsible for running this script
      */
-    public function uninstall(PluginAdapter  $adapter): bool
+    public function uninstall(JAdapterInstance $adapter): bool
     {
         File::delete(JPATH_ROOT . $this->assets_dir . '/.htaccess');
         return true;
