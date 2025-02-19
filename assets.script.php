@@ -29,7 +29,7 @@ class PlgSystemAssetsInstallerScript
      *
      * @return  boolean  True on success
      */
-    public function postflight(string $type, JAdapterInstance $adapter): bool
+    public function postflight(string $type, $adapter): bool
     {
         if (!($type == 'install' || $type == 'update')) {
             return false;
@@ -52,7 +52,7 @@ class PlgSystemAssetsInstallerScript
      *
      * @param   JAdapterInstance  $adapter  The object responsible for running this script
      */
-    public function uninstall(JAdapterInstance $adapter): bool
+    public function uninstall($adapter): bool
     {
         File::delete(JPATH_ROOT . $this->assets_dir . '/.htaccess');
         return true;
