@@ -34,6 +34,13 @@ class Assets extends CMSPlugin implements SubscriberInterface
 
     protected $autoloadLanguage = true;
 
+    protected $supported_areas = [
+        'com_content'          => ['model' => 'Article'],
+        'com_researchprojects' => ['model' => 'Researchproject'],
+        'com_users'            => ['model' => 'User']
+    ];
+
+
     /**
      * An internal flag whether plugin should listen any event.
      *
@@ -43,7 +50,6 @@ class Assets extends CMSPlugin implements SubscriberInterface
      */
     protected static $enabled = false;
 
-    protected $old_content = false;
 
     /**
      * Constructor
@@ -71,12 +77,13 @@ class Assets extends CMSPlugin implements SubscriberInterface
     public static function getSubscribedEvents(): array
     {
         return self::$enabled ? [
-            'onContentBeforeSave'  => 'onContentBeforeSave',
-            'onContentAfterSave'   => 'onContentAfterSave',
-            'onContentAfterDelete' => 'onContentAfterDelete',
-            'onContentPrepareData' => 'onContentPrepareData',
-            'onContentPrepareForm' => 'onContentPrepareForm',
-            'onBeforeRender'       => 'onBeforeRender'
+            'onBeforeRender'              => 'onBeforeRender',
+            'onContentAfterDelete'        => 'onContentAfterDelete',
+            'onContentAfterSave'          => 'onContentAfterSave',
+            'onContentBeforeSave'         => 'onContentBeforeSave',
+            'onContentBeforeValidateData' => 'onContentBeforeValidateData',
+            'onContentPrepareData'        => 'onContentPrepareData',
+            'onContentPrepareForm'        => 'onContentPrepareForm'
         ] : [];
     }
 
@@ -180,7 +187,6 @@ class Assets extends CMSPlugin implements SubscriberInterface
     }
 
     /**
-     *
      * @param   string  $html  The file to be converted.
      *
      * @return  array   The array of download files found.
@@ -198,6 +204,241 @@ class Assets extends CMSPlugin implements SubscriberInterface
         }
 
         return $downloads;
+    }
+
+    /**
+     * @param   string  $item_id
+     * @param   array  $new_downloads  The new downloads.
+     *
+     * @return  void
+     */
+    protected function unlockNewDownloads($item_id, $new_downloads) {
+        #echo '<pre>'; var_dump($new_downloads); echo '</pre>'; exit;
+        if (!empty($new_downloads)) {
+            // New downloads = downloads that appear in the content that's being save; we need
+            // to unlock these files:
+            foreach ($new_downloads as $file) {
+                $id_list = false;
+                $unlock_file = $file . '.unlock';
+                // Check for existing unlock file:
+                if (file_exists($unlock_file)) {
+                    // Get the contents of the unlock file:
+                    $id_list = json_decode(file_get_contents($unlock_file), true);
+                }
+
+                // Add the new download:
+                if (!is_array($id_list)) {
+                    $id_list = [];
+                }
+                if (!in_array($item_id, $id_list)) {
+                    $id_list[] = $item_id;
+                }
+                #echo '<pre>'; var_dump($id_list); echo '</pre>'; exit;
+                file_put_contents($unlock_file, json_encode($id_list));
+            }
+        }
+    }
+
+
+    /**
+     *
+     * @param   string  $item_id
+     * @param   array  $old_downloads  The old downloads.
+     * @param   array  $new_downloads  The new downloads.
+     *
+     * @return  void
+     */
+    protected function TidyOldDownloads($item_id, $old_downloads, $new_downloads) {
+
+        #echo '<pre>'; var_dump($item_id); echo '</pre>'; #'exit;
+        #echo '<pre>'; var_dump($old_downloads); echo '</pre>'; #exit;
+        #echo '<pre>'; var_dump($new_downloads); echo '</pre>'; exit;
+        if (!empty($old_downloads)) {
+            // Which downloads no longer appear in the new content:
+            $diff = array_diff($old_downloads, $new_downloads);
+            #Log::add('Diff: ' . print_r($diff, true));
+            #echo '<pre>'; var_dump($diff); echo '</pre>'; exit;
+            if ($diff) {
+                foreach ($diff as $file) {
+                    $unlock_file = $file . '.unlock';
+                    #echo '<pre>'; var_dump(file_exists($unlock_file)); echo '</pre>'; exit;
+                    #Log::add('unlock_file: ' . print_r($unlock_file, true));
+                    #Log::add('exists? ' . print_r(file_exists($unlock_file), true));
+                    if (file_exists($unlock_file)) {
+                        // Inspect the contents of the unlock file:
+                        $id_list = json_decode(file_get_contents($unlock_file), true);
+                        #echo '<pre>'; var_dump($id_list); echo '</pre>'; exit;
+                        #Log::add('id_list: ' . print_r($id_list, true));
+                        $can_delete = false;
+                        if (!$id_list) {
+                            $can_delete = true;
+                        } else {
+                            #Log::add('item_id: ' . print_r($item_id, true));
+                            #Log::add('in id_list? ' . print_r(array_key_exists($item_id, $id_list), true));
+
+                            #echo '<pre>'; var_dump($item_id); echo '</pre>'; #exit;
+                            #echo '<pre>'; var_dump(array_key_exists($item_id, $id_list)); echo '</pre>'; exit;
+                            // If this item previous unlocked this file, remove it:
+                            if (in_array($item_id, $id_list)) {
+                                unset($id_list[array_search($item_id, $id_list)]);
+                            }
+                            // If there are no items left we can delete the unlock file:
+                            if (count($id_list) == 0) {
+                                $can_delete = true;
+                            } else {
+                                file_put_contents($unlock_file, json_encode($id_list));
+                            }
+                        }
+                        #Log::add('can_delete: ' . print_r($can_delete, true));
+                        if ($can_delete) {
+                            File::delete($unlock_file);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Method is called before user data is stored in the database
+     *
+     * @param   array    $user   Holds the old user data.
+     * @param   boolean  $isNew  True if a new user is stored.
+     * @param   array    $data   Holds the new user data.
+     *
+     * @return  boolean
+     */
+    public function onContentBeforeValidateData(Event $event): void
+    {
+        [$form, $data] = array_values($event->getArguments());
+        $uri = Uri::getInstance();
+        $component = $uri->getVar('option');
+
+        if (!array_key_exists($component, $this->supported_areas)) {
+            return;
+        }
+
+        // Get the what the content was BEFORE it was saved.
+        // Find any downloads that WERE unlocked by it.
+        // Delete any files that are ONLY lock by it.
+        // OR
+        // Remove the content identifier from the unlock files.
+        // Then, we need to find downlaods in the CURRENT content and generate or append unlock
+        // files for those downloads.
+        // Each component supported will have content in a different variable name, and there may be
+        // more than one.
+
+        $is_new = false;
+
+        // Get the ID:
+        #echo '<pre>'; var_dump($data); echo '</pre>'; #exit;
+        $id = (int) $data['id'];
+        if ($id == 0) {
+            $is_new = true;
+        }
+
+        $item_id = $component . '.' . $id;
+
+        if (!$is_new) {
+            // If this isn't new we'll need the old data before the save to compare:
+            $app = Factory::getApplication();
+            $model = $app->bootComponent($component)->getMVCFactory()->createModel($this->supported_areas[$component]['model'], 'Administrator', ['ignore_request' => true]);
+            $item = $model->getItem($id);
+            #echo '<pre>'; var_dump($item); echo '</pre>'; exit;
+        }
+
+        // Let's handle articles first:
+        if ($component == 'com_content') {
+            $new_content = trim($data['articletext']);
+            $old_content = trim($item->introtext . $item->fulltext);
+
+            #echo '<pre>'; var_dump($new_content); echo '</pre>';# exit;
+            #echo '<pre>'; var_dump($old_content); echo '</pre>'; exit;
+            $new_downloads = $this->findDownloads($new_content);
+            #echo '<pre>'; var_dump($new_downloads); echo '</pre>'; exit;
+            $this->unlockNewDownloads($item_id, $new_downloads);
+
+            if (!$is_new) {
+                $old_downloads = $this->findDownloads($old_content);
+                $this->TidyOldDownloads($item_id, $old_downloads, $new_downloads);
+            }
+        }
+
+
+        // Next, user profile:
+        if ($component == 'com_users') {
+            $user_data     = json_decode(file_get_contents(Uri::root() . 'data/staff?id=' . $item->id), true);
+            #echo '<pre>'; var_dump($user_data); echo '</pre>'; exit;
+
+            // Biography:
+            $new_biography = trim($data['profile']['biography']);
+            $old_biography = trim($user_data[0]['biography']);
+
+            $bio_item_id = $item_id . '.bio';
+            $new_downloads = $this->findDownloads($new_biography);
+            $this->unlockNewDownloads($bio_item_id, $new_downloads);
+
+            if (!$is_new) {
+                $old_downloads = $this->findDownloads($old_biography);
+                $this->TidyOldDownloads($bio_item_id, $old_downloads, $new_downloads);
+            }
+
+            // Publications:
+            $new_publications = trim($data['profile']['publications_manual']);
+            $old_publications = trim($user_data[0]['publications_manual']);
+            $pub_item_id = $item_id . '.pub';
+            $new_downloads = $this->findDownloads($new_publications);
+            $this->unlockNewDownloads($pub_item_id, $new_downloads);
+
+            if (!$is_new) {
+                $old_downloads = $this->findDownloads($old_publications);
+                $this->TidyOldDownloads($pub_item_id, $old_downloads, $new_downloads);
+            }
+
+            // Custom Section:
+            $new_custom = trim($data['profile']['custom']);
+            $old_custom = trim($user_data[0]['custom']);
+
+            $cus_item_id = $item_id . '.cus';
+            $new_downloads = $this->findDownloads($new_custom);
+            $this->unlockNewDownloads($cus_item_id, $new_downloads);
+
+            if (!$is_new) {
+                $old_downloads = $this->findDownloads($old_custom);
+                $this->TidyOldDownloads($cus_item_id, $old_downloads, $new_downloads);
+            }
+
+        }
+
+        // Next, research projects:
+        if ($component == 'com_researchprojects') {
+            // Content:
+            $new_content = trim($data['content']);
+            $old_content = trim($item->content);
+            #echo '<pre>'; var_dump($new_content); echo '</pre>'; #exit;
+            #echo '<pre>'; var_dump($old_content); echo '</pre>'; exit;
+            $con_item_id = $item_id . '.con';
+            $new_downloads = $this->findDownloads($new_content);
+            $this->unlockNewDownloads($con_item_id, $new_downloads);
+
+            if (!$is_new) {
+                $old_downloads = $this->findDownloads($old_content);
+                $this->TidyOldDownloads($con_item_id, $old_downloads, $new_downloads);
+            }
+
+            // Publications:
+            $new_content = trim($data['publications']);
+            $old_content = trim($item->publications);
+            $pub_item_id = $item_id . '.pub';
+            $new_downloads = $this->findDownloads($new_content);
+            $this->unlockNewDownloads($pub_item_id, $new_downloads);
+
+            if (!$is_new) {
+                $old_downloads = $this->findDownloads($old_content);
+                $this->TidyOldDownloads($pub_item_id, $old_downloads, $new_downloads);
+            }
+        }
+
     }
 
     /**
@@ -275,10 +516,12 @@ class Assets extends CMSPlugin implements SubscriberInterface
         // above. It just happens to need to hook into the same event. Don't get confused, they
         // are separate.
         // Check if we're saving an article:
-        if ($context == 'com_content.article') {
-            // We need to capture the content before it's saved so we acan compare the downloads
+        /*if ($context == 'com_content.article') {
+            // We need to capture the content before it's saved so we can compare the downloads
 
             $id = $object->id;
+
+            $item_id = $context . '.' . $id;
 
             if (!$isNew) {
                 // Get old article:
@@ -286,9 +529,9 @@ class Assets extends CMSPlugin implements SubscriberInterface
                 $article_model = $app->bootComponent('com_content')->getMVCFactory()->createModel('Article', 'Administrator', ['ignore_request' => true]);
                 $article = $article_model->getItem($id);
 
-                $this->old_content = $article->introtext . $article->fulltext;
+                $this->old_content[$item_id] = $article->introtext . $article->fulltext;
             }
-        }
+        }*/
 
         return;
     }
@@ -361,7 +604,7 @@ class Assets extends CMSPlugin implements SubscriberInterface
         // above. It just happens to need to hook into the same event. Don't get confused, they
         // are separate.
 
-        $new_content = '';
+        /*$new_content = '';
         $old_downloads = false;
         $new_downloads = false;
 
@@ -376,18 +619,11 @@ class Assets extends CMSPlugin implements SubscriberInterface
             $id = $object->id;
             $item_id = $context . '.' . $id;
 
-            /*if (!$isNew) {
-                // Get old article:
-                $article_model = $app->bootComponent('com_content')->getMVCFactory()->createModel('Article', 'Administrator', ['ignore_request' => true]);
-                $article = $article_model->getItem($id);
-
-                $old_content = $article->introtext . $article->fulltext;
-            }*/
-        }
+        }*/
 
         // Check other supported contexts here...
 
-        if ($proccess_unlock_files) {
+        #if ($proccess_unlock_files) {
             // I think here, now, that it needs to run like this:
             // Get the content BEFORE it's saved.
             // Find any downloads that WERE unlocked by it.
@@ -400,87 +636,25 @@ class Assets extends CMSPlugin implements SubscriberInterface
 
             $new_downloads = $this->findDownloads($new_content);
 
-            #echo '<pre>'; var_dump($new_downloads); echo '</pre>'; exit;
-            if (!empty($new_downloads)) {
-                // New downloads = downloads that appear in the content that's being save; we need
-                // to unlock these files:
-                foreach ($new_downloads as $file) {
-                    $id_list = false;
-                    $unlock_file = $file . '.unlock';
-                    // Check for existing unlock file:
-                    if (file_exists($unlock_file)) {
-                        // Get the contents of the unlock file:
-                        $id_list = json_decode(file_get_contents($unlock_file), true);
-                    }
-                    // Add the new download:
-                    if (!is_array($id_list)) {
-                        $id_list = [];
-                    }
-                    if (!in_array($item_id, $id_list)) {
-                        $id_list[] = $item_id;// !!!! < THIS. we're overriding the array value for the
-                        // wrong file when there are multiple new downloads.
-                        // DO WE NEED TO RECORD IT AT ALL THOUGH? Can't we just record the item id's
-                        // that lock the file?
-                        // See old downloads section for....I think it should be ok
-                    }
-                    file_put_contents($unlock_file, json_encode($id_list));
-                }
-            }
+
+
+
+
+
+
+
             #return;
             #echo '<pre>'; var_dump($this->old_content); echo '</pre>'; exit;
-            if ($this->old_content) {
+            #if (!empty($this->old_content[$item_id])) {
                 // Next we need to update unlock files and delete orphaned unlock ones (files which
                 // used to be unlockled by this item but aren't any more, and aren't by anything
                 // else).
-                $old_downloads = $this->findDownloads($this->old_content);
+                $old_downloads = $this->findDownloads($this->old_content[$item_id]);
 
-                if (!empty($old_downloads)) {
-                    // Which downloads no longer appear in the new content:
-                    $diff = array_diff($old_downloads, $new_downloads);
-                    #Log::add('Diff: ' . print_r($diff, true));
-                    #echo '<pre>'; var_dump($diff); echo '</pre>'; exit;
-                    if ($diff) {
-                        foreach ($diff as $file) {
-                            $unlock_file = $file . '.unlock';
-                            #echo '<pre>'; var_dump(file_exists($unlock_file)); echo '</pre>'; exit;
-                            #Log::add('unlock_file: ' . print_r($unlock_file, true));
-                            #Log::add('exists? ' . print_r(file_exists($unlock_file), true));
-                            if (file_exists($unlock_file)) {
-                                // Inspect the contents of the unlock file:
-                                $id_list = json_decode(file_get_contents($unlock_file), true);
-                                #echo '<pre>'; var_dump($id_list); echo '</pre>'; exit;
-                                #Log::add('id_list: ' . print_r($id_list, true));
-                                $can_delete = false;
-                                if (!$id_list) {
-                                    $can_delete = true;
-                                } else {
-                                    #Log::add('item_id: ' . print_r($item_id, true));
-                                    #Log::add('in id_list? ' . print_r(array_key_exists($item_id, $id_list), true));
 
-                                    #echo '<pre>'; var_dump($item_id); echo '</pre>'; #exit;
-                                    #echo '<pre>'; var_dump(array_key_exists($item_id, $id_list)); echo '</pre>'; exit;
-                                    // If this item previous unlocked this file, remove it:
-                                    if (in_array($item_id, $id_list)) {
-                                        unset($id_list[array_search($item_id, $id_list)]);
-                                    }
-                                    // If there are no items left we can delete the unlock file:
-                                    if (count($id_list) == 0) {
-                                        $can_delete = true;
-                                    } else {
-                                        file_put_contents($unlock_file, json_encode($id_list));
-                                    }
-                                }
-                                #Log::add('can_delete: ' . print_r($can_delete, true));
-                                if ($can_delete) {
-                                    File::delete($unlock_file);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            #}
 
-        }
+        #}
 
 
         return;
@@ -577,6 +751,7 @@ class Assets extends CMSPlugin implements SubscriberInterface
         $form->loadFile('assets', false);
         return;
     }
+
 
 
     /**
