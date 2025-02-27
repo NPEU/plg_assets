@@ -250,7 +250,7 @@ class Assets extends CMSPlugin implements SubscriberInterface
      */
     protected function TidyOldDownloads($item_id, $old_downloads, $new_downloads) {
 
-        #echo '<pre>'; var_dump($item_id); echo '</pre>'; #'exit;
+        #echo '<pre>'; var_dump($item_id); echo '</pre>'; exit;
         #echo '<pre>'; var_dump($old_downloads); echo '</pre>'; #exit;
         #echo '<pre>'; var_dump($new_downloads); echo '</pre>'; exit;
         if (!empty($old_downloads)) {
@@ -267,6 +267,9 @@ class Assets extends CMSPlugin implements SubscriberInterface
                     if (file_exists($unlock_file)) {
                         // Inspect the contents of the unlock file:
                         $id_list = json_decode(file_get_contents($unlock_file), true);
+                        if (!is_array($id_list)) {
+                            $id_list = [];
+                        }
                         #echo '<pre>'; var_dump($id_list); echo '</pre>'; exit;
                         #Log::add('id_list: ' . print_r($id_list, true));
                         $can_delete = false;
