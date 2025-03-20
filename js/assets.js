@@ -29,7 +29,7 @@
                     var item_container = el.querySelector('.media-browser-item-preview');
                     var filename = item_container.getAttribute('title');
                     var extension = filename.split('.').pop();
-                    console.log(extension);
+                    //console.log(extension);
                     if (!extension.match(/(jpg|png)/)) {
                         el.classList.add('is_file');
                         el.dataset.filetype = extension;
