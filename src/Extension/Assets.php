@@ -81,9 +81,7 @@ class Assets extends CMSPlugin implements SubscriberInterface
             'onContentAfterDelete'        => 'onContentAfterDelete',
             'onContentAfterSave'          => 'onContentAfterSave',
             'onContentBeforeSave'         => 'onContentBeforeSave',
-            'onContentBeforeValidateData' => 'onContentBeforeValidateData',
-            'onContentPrepareData'        => 'onContentPrepareData',
-            'onContentPrepareForm'        => 'onContentPrepareForm'
+            'onContentBeforeValidateData' => 'onContentBeforeValidateData'
         ] : [];
     }
 
@@ -119,33 +117,8 @@ class Assets extends CMSPlugin implements SubscriberInterface
             chown($filepath, $upload_file_owner);
         }
 
-        /*
-        // ImageMagick can generate thumbnails from non-PDF's if a suitable delegate is install
-        // (e.g. LibreOffice), but KEEP FOR REFERENCE:
-
-        // If it's not a PDF, we need to convert it one to be able to created the thumbnail, then
-        // delete it:
-        if ($type != 'application/pdf') {
-            $info = pathinfo($file);
-            // Note unoconv default export format is PDF so we don't need to specify:
-            $cmd         = 'unoconv -e PageRange=1 "' . $file . '"';
-            $output      = exec($cmd . ' 2>&1');
-            $pdf_file    = preg_replace('#\.' . $info['extension'] . '$#', '.pdf', $file);
-        }
-        */
-
-        // PDF's that aren't A4 seem to default to A4, so see if we can fix that:
-        // UPDATE this happened for PDF's exported from Excel where you select (just the chart) or
-        // similar. For some reason that doesn't work very well and retains an A4 media box.
-        // Printing those PDF's to another PDF solved the problem, and I wasn't able to find a way
-        // to fix this here.
-        /*if ($filetype == 'application/pdf') {
-        }*/
-
-
         // We just add .png to the thumbnail filename so we can determine the real filename in the
         // 'Downloads Media Hack' (see elsewhere):
-        #$img_filepath = $filepath . '.png.preview';
         $img_filepath = $filepath . '.png';
 
         $thumbsize        = $this->params->get('thumbsize', '1200');
@@ -213,7 +186,6 @@ class Assets extends CMSPlugin implements SubscriberInterface
      * @return  void
      */
     protected function unlockNewDownloads($item_id, $new_downloads) {
-        #echo '<pre>'; var_dump($new_downloads); echo '</pre>'; exit;
         if (!empty($new_downloads)) {
             // New downloads = downloads that appear in the content that's being save; we need
             // to unlock these files:
@@ -233,7 +205,6 @@ class Assets extends CMSPlugin implements SubscriberInterface
                 if (!in_array($item_id, $id_list)) {
                     $id_list[] = $item_id;
                 }
-                #echo '<pre>'; var_dump($id_list); echo '</pre>'; exit;
                 file_put_contents($unlock_file, json_encode($id_list));
             }
         }
@@ -250,37 +221,25 @@ class Assets extends CMSPlugin implements SubscriberInterface
      */
     protected function TidyOldDownloads($item_id, $old_downloads, $new_downloads) {
 
-        #echo '<pre>'; var_dump($item_id); echo '</pre>'; exit;
-        #echo '<pre>'; var_dump($old_downloads); echo '</pre>'; #exit;
-        #echo '<pre>'; var_dump($new_downloads); echo '</pre>'; exit;
         if (!empty($old_downloads)) {
             // Which downloads no longer appear in the new content:
             $diff = array_diff($old_downloads, $new_downloads);
-            #Log::add('Diff: ' . print_r($diff, true));
-            #echo '<pre>'; var_dump($diff); echo '</pre>'; exit;
+
             if ($diff) {
                 foreach ($diff as $file) {
                     $unlock_file = $file . '.unlock';
-                    #echo '<pre>'; var_dump(file_exists($unlock_file)); echo '</pre>'; exit;
-                    #Log::add('unlock_file: ' . print_r($unlock_file, true));
-                    #Log::add('exists? ' . print_r(file_exists($unlock_file), true));
+
                     if (file_exists($unlock_file)) {
                         // Inspect the contents of the unlock file:
                         $id_list = json_decode(file_get_contents($unlock_file), true);
                         if (!is_array($id_list)) {
                             $id_list = [];
                         }
-                        #echo '<pre>'; var_dump($id_list); echo '</pre>'; exit;
-                        #Log::add('id_list: ' . print_r($id_list, true));
+
                         $can_delete = false;
                         if (!$id_list) {
                             $can_delete = true;
                         } else {
-                            #Log::add('item_id: ' . print_r($item_id, true));
-                            #Log::add('in id_list? ' . print_r(array_key_exists($item_id, $id_list), true));
-
-                            #echo '<pre>'; var_dump($item_id); echo '</pre>'; #exit;
-                            #echo '<pre>'; var_dump(array_key_exists($item_id, $id_list)); echo '</pre>'; exit;
                             // If this item previous unlocked this file, remove it:
                             if (in_array($item_id, $id_list)) {
                                 unset($id_list[array_search($item_id, $id_list)]);
@@ -292,7 +251,6 @@ class Assets extends CMSPlugin implements SubscriberInterface
                                 file_put_contents($unlock_file, json_encode($id_list));
                             }
                         }
-                        #Log::add('can_delete: ' . print_r($can_delete, true));
                         if ($can_delete) {
                             File::delete($unlock_file);
                         }
@@ -334,7 +292,6 @@ class Assets extends CMSPlugin implements SubscriberInterface
         $is_new = false;
 
         // Get the ID:
-        #echo '<pre>'; var_dump($data); echo '</pre>'; #exit;
         $id = (int) $data['id'];
         if ($id == 0) {
             $is_new = true;
@@ -347,7 +304,6 @@ class Assets extends CMSPlugin implements SubscriberInterface
             $app = Factory::getApplication();
             $model = $app->bootComponent($component)->getMVCFactory()->createModel($this->supported_areas[$component]['model'], 'Administrator', ['ignore_request' => true]);
             $item = $model->getItem($id);
-            #echo '<pre>'; var_dump($item); echo '</pre>'; exit;
         }
 
         // Let's handle articles first:
@@ -355,10 +311,7 @@ class Assets extends CMSPlugin implements SubscriberInterface
             $new_content = trim($data['articletext']);
             $old_content = trim($item->introtext . $item->fulltext);
 
-            #echo '<pre>'; var_dump($new_content); echo '</pre>';# exit;
-            #echo '<pre>'; var_dump($old_content); echo '</pre>'; exit;
             $new_downloads = $this->findDownloads($new_content);
-            #echo '<pre>'; var_dump($new_downloads); echo '</pre>'; exit;
             $this->unlockNewDownloads($item_id, $new_downloads);
 
             if (!$is_new) {
@@ -371,7 +324,6 @@ class Assets extends CMSPlugin implements SubscriberInterface
         // Next, user profile:
         if ($component == 'com_users') {
             $user_data     = json_decode(file_get_contents(Uri::root() . 'data/staff?id=' . $item->id), true);
-            #echo '<pre>'; var_dump($user_data); echo '</pre>'; exit;
 
             // Biography:
             $new_biography = trim($data['profile']['biography']);
@@ -418,8 +370,7 @@ class Assets extends CMSPlugin implements SubscriberInterface
             // Content:
             $new_content = trim($data['content']);
             $old_content = trim($item->content);
-            #echo '<pre>'; var_dump($new_content); echo '</pre>'; #exit;
-            #echo '<pre>'; var_dump($old_content); echo '</pre>'; exit;
+
             $con_item_id = $item_id . '.con';
             $new_downloads = $this->findDownloads($new_content);
             $this->unlockNewDownloads($con_item_id, $new_downloads);
@@ -477,7 +428,6 @@ class Assets extends CMSPlugin implements SubscriberInterface
             // Create the file:
             $filename = $this->getAdapter($object->adapter)->createFile($tmp_name, $object->path, $object->data);
 
-            #Log::add($filename); #exit;
             if (!$filename) {
                 throw new GenericDataException(Text::_('PLG_SYSTEM_ASSETS_ERROR_FILE_CREATE_FAIL'), 100);
                 return;
@@ -495,46 +445,20 @@ class Assets extends CMSPlugin implements SubscriberInterface
 
             $img_filepath = $this->generateThumbnail($root_files_path . $object->path . '/' . $filename);
 
-            #Log::add(mime_content_type($tmp_filepath)); exit;
-
             // Did the image get generated?
             if (file_exists($img_filepath)) {
                 // Looks like it's going to be ok, so delete it (in case something else fails the upload):
                 File::delete($img_filepath);
                 File::delete($tmp_filepath);
-                #$this->getAdapter($object->adapter)->delete($root_files_path . $object->path . '/' . $tmp_name);
                 return;
             } else {
                 // Something went wrong, reject the the upload and warn the user:
-                //JError::raiseWarning(100, Text::_('PLG_SYSTEM_ASSETS_ERROR_FILE_PROCESS_FAIL'));
                 throw new GenericDataException(Text::_('PLG_SYSTEM_ASSETS_ERROR_FILE_THUMB_FAIL'), 100);
 
                 return;
             }
 
         }
-
-
-        // The following is a totally seperate part of the mechanism to the file thumb generation
-        // above. It just happens to need to hook into the same event. Don't get confused, they
-        // are separate.
-        // Check if we're saving an article:
-        /*if ($context == 'com_content.article') {
-            // We need to capture the content before it's saved so we can compare the downloads
-
-            $id = $object->id;
-
-            $item_id = $context . '.' . $id;
-
-            if (!$isNew) {
-                // Get old article:
-                $app = Factory::getApplication();
-                $article_model = $app->bootComponent('com_content')->getMVCFactory()->createModel('Article', 'Administrator', ['ignore_request' => true]);
-                $article = $article_model->getItem($id);
-
-                $this->old_content[$item_id] = $article->introtext . $article->fulltext;
-            }
-        }*/
 
         return;
     }
@@ -551,15 +475,12 @@ class Assets extends CMSPlugin implements SubscriberInterface
 
         // Check if we're saving an media file:
         if ($context == 'com_media.file') {
-            #Log::add('Saving a file...');
 
             $media_files_path = ComponentHelper::getParams('com_media')->get('file_path', 'images');
             $root_files_path = JPATH_ROOT .'/' . $media_files_path;
 
             $full_path = $root_files_path . $object->path . '/' . $object->name;
-            #Log::add(print_r($full_path, true)); #exit;
             $filetype = mime_content_type($full_path);
-            #Log::add(print_r($filetype, true)); #exit;
 
             $upload_file_permissions = octdec($this->params->get('upload_file_permissions', false));
             $upload_file_group       = $this->params->get('upload_file_group', false);
@@ -596,69 +517,7 @@ class Assets extends CMSPlugin implements SubscriberInterface
 
             $img_filepath = $this->generateThumbnail($full_path);
 
-            /*if ($img_filepath) {
-                // Rename them to add a .download extension or something?
-                File::move($full_path, $full_path . '.download');
-            }*/
         }
-
-
-        // The following is a totally seperate part of the mechanism to the file thumb generation
-        // above. It just happens to need to hook into the same event. Don't get confused, they
-        // are separate.
-
-        /*$new_content = '';
-        $old_downloads = false;
-        $new_downloads = false;
-
-        $proccess_unlock_files = false;
-
-        // Check if we're saving an article:
-        if ($context == 'com_content.article') {
-            $proccess_unlock_files = true;
-            #echo '<pre>'; var_dump($object->id); echo '</pre>'; exit;
-            #echo '<pre>'; var_dump($isNew); echo '</pre>'; exit;
-            $new_content = $object->introtext . $object->fulltext;
-            $id = $object->id;
-            $item_id = $context . '.' . $id;
-
-        }*/
-
-        // Check other supported contexts here...
-
-        #if ($proccess_unlock_files) {
-            // I think here, now, that it needs to run like this:
-            // Get the content BEFORE it's saved.
-            // Find any downloads that WERE unlocked by it.
-            // Delete any files that are ONLY lock by it.
-            // OR
-            // Remove the content identifier from the unlock files.
-            // Then, we need to find downlaods in the CURRENT content and generate or append unlock
-            // files for those downloads.
-
-
-            $new_downloads = $this->findDownloads($new_content);
-
-
-
-
-
-
-
-
-            #return;
-            #echo '<pre>'; var_dump($this->old_content); echo '</pre>'; exit;
-            #if (!empty($this->old_content[$item_id])) {
-                // Next we need to update unlock files and delete orphaned unlock ones (files which
-                // used to be unlockled by this item but aren't any more, and aren't by anything
-                // else).
-                $old_downloads = $this->findDownloads($this->old_content[$item_id]);
-
-
-            #}
-
-        #}
-
 
         return;
 
@@ -697,67 +556,6 @@ class Assets extends CMSPlugin implements SubscriberInterface
     }
 
     /**
-     * Runs on content preparation
-     *
-     * @param   Event  $event
-     *
-     * @return  boolean
-     *
-     * @since   1.6
-     */
-    public function onContentPrepareData(Event $event): void
-    {
-        [$context, $data] = array_values($event->getArguments());
-
-        if ($context == 'com_content.article' && !empty($data->attribs['assets-downloads-list'])) {
-            $list = $data->attribs['assets-downloads-list'];
-            $string = '';
-            // Check if the string is base64 encoded:
-            if (base64_encode(base64_decode($list, true)) === $list){
-                $string = base64_decode($list, true);
-            } else {
-                $string = $list;
-            }
-
-            // Check if the string was gzipped:
-            if (@gzuncompress($string) == false) {
-                $result = $string;
-            } else {
-                $result = gzuncompress($string);
-            }
-
-            $data->attribs['assets-downloads-list'] = $result;
-        }
-    }
-
-    /**
-     * Prepare form.
-     *
-     * @param   Event  $event
-     *
-     * @return  boolean
-     */
-    public function onContentPrepareForm(Event $event): void
-    {
-        [$form, $data] = array_values($event->getArguments());
-
-        if (!$form instanceof \Joomla\CMS\Form\Form) {
-            return;
-        }
-
-        if ($form->getName() != 'com_content.article') {
-            return; // We only want to manipulate the article form.
-        }
-
-        // Add the extra fields to the form
-        FormHelper::addFormPath(dirname(dirname(__DIR__)) . '/forms');
-        $form->loadFile('assets', false);
-        return;
-    }
-
-
-
-    /**
      * Add CSS and JS.
      */
     public function onBeforeRender(Event $event): void
@@ -768,106 +566,9 @@ class Assets extends CMSPlugin implements SubscriberInterface
         }
         $document = Factory::getDocument();
         $plugin_folder = str_replace(JPATH_ROOT, '', dirname(dirname(__DIR__)));
-        #Log::add(print_r($plugin_folder, true));
+
         $document->addStyleSheet($plugin_folder . '/css/assets.css');
         $document->addScript($plugin_folder . '/js/assets.js');
     }
 
-    /** ARRRGH - The whole MEDIA thing is generated by JS so I can't use this here.
-     * After Render Event. Check whether the current page is excluded from cache.
-     *
-     * @param   Event  $event  The CMS event we are handling.
-     *
-     * @return  void
-     *
-     * @since   3.9.12
-     */
-    /*public function onAfterRender(Event $event)
-    {
-        //Log::add(print_r($event->getArguments(), true));
-        // Event has no context argument so we need to look for that elsewhere:
-        $app = Factory::getApplication();
-
-        if ($app->isClient('site')) {
-            return;
-        }
-
-        $uri = Uri::getInstance();
-
-        if ($uri->getVar('option') != 'com_media') {
-            return;
-        }
-
-        $body = $app->getBody();
-
-        // We need to replace various visual inconsistencies in the interface. Mainly to remove the
-        // the '.png' extension for all visible views, but preserve it for forms and img src etc.
-
-        // 1. <div class="media-browser-item-preview" title="<<<FILENAME>>>.pdf.png">
-        #preg_match_all('#<div[^>]+class="media-browser-item-preview"[^>]+title="("[^"]*)\.png"  +src="[^"]*   /assets/downloads/([^"]+)"#', $response, $matches, PREG_SET_ORDER);
-        $body = preg_replace('#(<div[^>]+class="media-browser-item-preview"[^>]+title="[^"]+)\.png"#m', '$1"', $body, -1, $count);
-
-        Log::add(print_r($count, true));
-
-
-        $app->setBody($body);
-    }*/
-
-    /**
-     * onAfterRender
-     * Joomla's Media component does not handle using it for downloads. Rather than replace the
-     * component or hack it about, we've ensured there's always a thumbnail of each download, so the
-     * the media component is effectively tricked into displaying all the available downloads, since
-     * there always exists a matching image (the Media Component will only show images when opened
-     * as a model for the Image file input, and there isn't a Downloads equivalent).
-     * However, we need to make sure the actual file path is passed back to the editor, so we need
-     * to replace all occurrences of the image filename with the download filename, except where it
-     * appears as the thumbnail src.
-     * This is why thumbnails have .png appended to the full filename, rather than replacing the
-     * extension.
-     */
-    /*public function onAfterRender()
-    {
-        $app = Factory::getApplication();
-
-        if ($app->isClient('site')) {
-            return;
-        }
-
-        $uri = Uri::getInstance();
-
-        if ($uri->getVar('option') != 'com_media') {
-            return;
-        }
-
-        $body = $app->getBody();
-
-        if ($uri->getVar('view') == 'imagesList') {
-            preg_match_all('#<img[^>]+src="[^"]*   /assets/downloads/([^"]+)"#', $response, $matches, PREG_SET_ORDER);
-
-            foreach ($matches as $match) {
-                $info     = pathinfo($match[1]);
-
-                // Replace the whole image tag temporarily:
-                $body = str_replace($match[0], '<<<TMP-IMAGE>>>', $body);
-
-                // Replace all other occurrences of the filename:
-                $body = str_replace('/' . $info['basename'], '/'  . $info['filename'], $body);
-
-                // Restore the image tag:
-                $body = str_replace('<<<TMP-IMAGE>>>', $match[0], $body);
-            }
-        }
-
-        if ($uri->getVar('view') == 'images' && $uri->getVar('fieldid') == 'jfile_href') {
-            // Update labels image -> file:
-            $body = str_replace('<label for="f_url">Image URL</label>', '<label for="f_url">File URL</label>', $body);
-        }
-
-
-        // NEW! I think here I will have the check for e.g. ".pdf" etc and replace with ".pdf.png" so the thumbnails are
-        // shown
-
-        $app->setBody($body);
-    }*/
 }
