@@ -273,7 +273,22 @@ class Assets extends CMSPlugin implements SubscriberInterface
     {
         [$form, $data] = array_values($event->getArguments());
         $uri = Uri::getInstance();
+
         $component = $uri->getVar('option');
+
+        if (!$component) {
+            // Maybe we're in the front end - try getting it from the menu item:
+            $menu_item = Factory::getApplication()->getMenu()->getActive();
+            if ($menu_item->type == 'component') {
+                $component = $menu_item->component;
+            }
+        }
+
+
+        if (!$component) {
+            return;
+        }
+
 
         if (!array_key_exists($component, $this->supported_areas)) {
             return;
