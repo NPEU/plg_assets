@@ -131,7 +131,9 @@ class Assets extends CMSPlugin implements SubscriberInterface
         // UPDATE 20190603 - seems to have been resolved. At least it's working now so
         // reinstating -colorspace to fix colours.
         // Note "-background white -alpha remove -flatten -alpha off" adds a white background.
-        $options  = ' -strip -colorspace rgb -density 300x300 -resize ' . $thumbsize . 'x'. $thumbsize . ' -quality 90 ';
+        //$options  = ' -strip -colorspace rgb -density 300x300 -resize ' . $thumbsize . 'x'. $thumbsize . ' -quality 90 ';
+        // At some point some PDF's started to be thumbnailed much darker, so sRGB colourspace:
+        $options  = ' -strip -colorspace sRGB -density 300x300 -resize ' . $thumbsize . 'x'. $thumbsize . ' -quality 90 ';
         $cmd      = $imagemagick_path . $options . '"' . $filepath . '[0]" -background white -alpha remove -flatten -alpha off ' . '"' . $img_filepath . '"';
         $output = exec($cmd . ' 2>&1');
 
@@ -273,22 +275,7 @@ class Assets extends CMSPlugin implements SubscriberInterface
     {
         [$form, $data] = array_values($event->getArguments());
         $uri = Uri::getInstance();
-
         $component = $uri->getVar('option');
-
-        if (!$component) {
-            // Maybe we're in the front end - try getting it from the menu item:
-            $menu_item = Factory::getApplication()->getMenu()->getActive();
-            if ($menu_item->type == 'component') {
-                $component = $menu_item->component;
-            }
-        }
-
-
-        if (!$component) {
-            return;
-        }
-
 
         if (!array_key_exists($component, $this->supported_areas)) {
             return;
